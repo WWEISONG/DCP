@@ -13,16 +13,39 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
-app = Flask(__name__)
-# Allow all origins by default so the public GitHub Pages site can call the
-# backend without configuration. Set ALLOWED_ORIGINS (comma-separated) to lock
-# this down once the public hostname is known, e.g.
-#   ALLOWED_ORIGINS="https://your-org.github.io"
+# Serve the React production build at /. The frontend's build/ folder lives
+# one level up from this file, inside demo/frontend/build/. When that folder
+# doesn't exist (pure-backend dev mode), Flask falls back to not serving any
+# static frontend — the dev server on :3000 handles it instead.
+_FRONTEND_BUILD = os.path.abspath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), '..', 'frontend', 'build'
+))
+if os.path.isdir(_FRONTEND_BUILD):
+    app = Flask(__name__, static_folder=_FRONTEND_BUILD, static_url_path='')
+else:
+    app = Flask(__name__)
+
+# CORS still useful: even though the same Flask now serves both the frontend
+# and the API in production, leaving CORS on means a developer running the CRA
+# dev server on :3000 can still talk to a remote backend. Set ALLOWED_ORIGINS
+# (comma-separated) to lock this down in production if desired.
 _allowed = os.environ.get('ALLOWED_ORIGINS', '*').strip()
 if _allowed == '*':
     CORS(app)
 else:
     CORS(app, origins=[o.strip() for o in _allowed.split(',') if o.strip()])
+
+@app.route('/')
+def _serve_index():
+    """Serve the React app's index.html at the root."""
+    if os.path.isdir(_FRONTEND_BUILD):
+        return app.send_static_file('index.html')
+    return (
+        '<h1>DCP backend running</h1>'
+        '<p>No frontend build found at <code>' + _FRONTEND_BUILD + '</code>. '
+        'Build it with <code>npm run build</code> in <code>demo/frontend/</code>, '
+        'or run the CRA dev server on port 3000.</p>'
+    ), 200
 
 # Global VINE module reference (will be set during startup)
 _vine_module_global = None
