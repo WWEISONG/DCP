@@ -35,12 +35,11 @@ c2pa-python-example/client_volume/
 c2pa-python-example/config_volume/
 
 # ===== Large vendored third-party (kept separately) =====
-# VINE has its own repo and model weights — recommend cloning beside this repo
-# rather than vendoring. If you choose to vendor, comment the next line out.
-VINE/
 # c2patool is a precompiled binary distribution. Don't commit binaries — fetch
 # from the upstream release.
 c2patool/
+# VINE benchmark animation assets (unused at inference, ~26 MB).
+VINE/vine/w_bench_utils/image_to_video/generative-models/assets/*.gif
 
 # ===== Example/test artefacts =====
 example-img-signed.jpg
