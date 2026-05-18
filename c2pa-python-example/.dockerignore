@@ -1,0 +1,16 @@
+.gitignore
+*.md
+docker-compose.yml
+example-env.env
+LICENSE
+README.md
+*.txt
+!requirements.txt
+Makefile
+volume/
+local_volume/
+client_volume/
+# Extracted awscli installer — must not enter the image, or it overrides the
+# arm64 install with stale binaries (the cause of the rosetta error we hit).
+aws/
+awscliv2.zip

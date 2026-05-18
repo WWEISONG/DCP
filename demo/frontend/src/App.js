@@ -1,0 +1,1802 @@
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import './App.css';
+import axios from 'axios';
+import unswLogo from './assets/UNSW_logo.png';
+import data61Logo from './assets/data61-logo.png';
+import fuBaoImage from './assets/FuBao.png';
+import teamWeiSong from './assets/team_weisong.jpg';
+import teamYuleiSui from './assets/team_yuleisui.jpg';
+import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
+import teamJinglingXue from './assets/team_jinglingxue.jpeg';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+function validateFile(file) {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return 'Invalid file type. Please upload a JPG, JPEG, or PNG image.';
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    return 'File size too large (max 10MB).';
+  }
+  return null;
+}
+
+function WarningBanner({ title, detail }) {
+  return (
+    <div className="feature-warning" role="alert">
+      <svg className="warning-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      <div className="warning-body">
+        <strong className="warning-title">{title}</strong>
+        {detail && <span className="warning-detail">{detail}</span>}
+      </div>
+    </div>
+  );
+}
+
+function FileDropZone({ panelId, file, preview, onFile, onClear, disabled }) {
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); setDragging(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setDragging(false); };
+  const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
+  const handleDrop = (e) => {
+    e.preventDefault(); e.stopPropagation(); setDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) onFile(files[0]);
+  };
+  const handleSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) onFile(files[0]);
+    e.target.value = '';
+  };
+  const loadExample = async () => {
+    const resp = await fetch(fuBaoImage);
+    const blob = await resp.blob();
+    onFile(new File([blob], 'FuBao.png', { type: blob.type || 'image/png' }));
+  };
+
+  if (preview) {
+    return (
+      <div className="panel-preview">
+        <img src={preview} alt={`${panelId} preview`} className="panel-preview-img" />
+        <div className="panel-preview-meta">
+          <span className="panel-preview-name" title={file?.name}>{file?.name}</span>
+          <button className="panel-clear-btn" onClick={onClear} disabled={disabled} title="Remove">
+            ✕
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`panel-dropzone ${dragging ? 'dragging' : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <svg className="panel-upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+      <p className="panel-dropzone-text">Drag &amp; drop or choose an image</p>
+      <p className="panel-dropzone-hint">JPG / PNG, max 10MB</p>
+      <div className="panel-dropzone-actions">
+        <input
+          ref={inputRef}
+          type="file"
+          id={`file-input-${panelId}`}
+          className="file-input"
+          accept="image/jpeg,image/jpg,image/png"
+          onChange={handleSelect}
+          disabled={disabled}
+        />
+        <label htmlFor={`file-input-${panelId}`} className="file-input-label">Choose file</label>
+        <button className="example-image-button-small" onClick={loadExample} disabled={disabled}>
+          Use example
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function C2paPanel() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [error, setError] = useState(null);
+  const [downloadUrl, setDownloadUrl] = useState(null);
+  const [downloadName, setDownloadName] = useState(null);
+  const [manifest, setManifest] = useState(null);
+  const [hasC2pa, setHasC2pa] = useState(null);
+
+  const reset = () => {
+    setFile(null); setPreview(null); setError(null);
+    setDownloadUrl(null); setDownloadName(null);
+    setManifest(null); setHasC2pa(null);
+  };
+
+  const onFile = useCallback((f) => {
+    const err = validateFile(f);
+    if (err) { setError(err); return; }
+    setError(null); setDownloadUrl(null); setDownloadName(null);
+    setManifest(null); setHasC2pa(null);
+    const reader = new FileReader();
+    reader.onloadend = () => { setPreview(reader.result); setFile(f); };
+    reader.readAsDataURL(f);
+  }, []);
+
+  const handleSign = async () => {
+    if (!file || busy) return;
+    setBusy('sign'); setError(null); setManifest(null); setHasC2pa(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await axios.post(`${API_URL}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 180000,
+      });
+      setDownloadUrl(resp.data.download_url);
+      setDownloadName(resp.data.filename);
+
+      try {
+        const signedResp = await axios.get(`${API_URL}${resp.data.download_url}`, {
+          responseType: 'blob',
+          timeout: 30000,
+        });
+        const signedBlob = signedResp.data;
+        const verifyForm = new FormData();
+        verifyForm.append('file', new File([signedBlob], resp.data.filename, { type: signedBlob.type || 'image/jpeg' }));
+        const verifyResp = await axios.post(`${API_URL}/read-c2pa-upload`, verifyForm, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 30000,
+        });
+        if (verifyResp.data.success && verifyResp.data.has_c2pa) {
+          setManifest(verifyResp.data.manifest);
+          setHasC2pa(true);
+        }
+      } catch (verifyErr) {
+        console.warn('Auto-verify after sign failed:', verifyErr);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.details || err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!file || busy) return;
+    setBusy('verify'); setError(null); setManifest(null); setHasC2pa(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await axios.post(`${API_URL}/read-c2pa-upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+      if (resp.data.success && resp.data.has_c2pa) {
+        setManifest(resp.data.manifest);
+        setHasC2pa(true);
+      } else {
+        setHasC2pa(false);
+      }
+    } catch (err) {
+      if (err.response?.data?.has_c2pa === false) {
+        setHasC2pa(false);
+      } else {
+        setError(err.response?.data?.error || err.message);
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!downloadUrl) return;
+    window.location.href = `${API_URL}${downloadUrl}`;
+  };
+
+  return (
+    <section className="feature-panel feature-panel-c2pa">
+      <header className="feature-header">
+        <h2 className="feature-title">C2PA Signing</h2>
+        <p className="feature-subtitle">Sign images with verifiable provenance credentials</p>
+      </header>
+
+      <FileDropZone
+        panelId="c2pa"
+        file={file}
+        preview={preview}
+        onFile={onFile}
+        onClear={reset}
+        disabled={!!busy}
+      />
+
+      <div className="feature-actions">
+        <button
+          className="feature-btn primary"
+          onClick={handleSign}
+          disabled={!file || !!busy}
+        >
+          {busy === 'sign' ? (<><span className="btn-spinner"></span>Signing…</>) : 'Sign image'}
+        </button>
+        <button
+          className="feature-btn secondary"
+          onClick={handleVerify}
+          disabled={!file || !!busy}
+        >
+          {busy === 'verify' ? (<><span className="btn-spinner"></span>Verifying…</>) : 'Verify C2PA'}
+        </button>
+      </div>
+
+      {error && <div className="feature-error">⚠ {error}</div>}
+
+      {downloadUrl && (
+        <div className="feature-result success">
+          <div className="result-row">
+            <span>✅ Signed file ready: <code>{downloadName}</code></span>
+          </div>
+          <button className="feature-btn download" onClick={handleDownload}>
+            Download signed file
+          </button>
+        </div>
+      )}
+
+      {hasC2pa === false && (
+        <WarningBanner title="This file is NOT signed!" detail="No C2PA manifest was found. Use “Sign image” to add one." />
+      )}
+
+      {hasC2pa === true && manifest && (
+        <div className="feature-result">
+          <h3 className="result-title">C2PA manifest</h3>
+          <C2paManifestView manifest={manifest} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function C2paManifestView({ manifest }) {
+  const activeId = manifest.active_manifest;
+  const active = activeId && manifest.manifests ? manifest.manifests[activeId] : null;
+  const sig = active?.signature_info || {};
+  const validationState = manifest.validation_state || 'unknown';
+  const isInvalid = validationState && validationState !== 'Valid';
+
+  // Pull a concise list of failure explanations so we can show them with the warning.
+  const failures = manifest?.validation_results?.activeManifest?.failure || [];
+  const failureSummary = failures
+    .map(f => f.explanation || f.code)
+    .filter(Boolean)
+    .slice(0, 3)
+    .join('; ');
+
+  return (
+    <div className="c2pa-manifest-view">
+      {isInvalid && (
+        <WarningBanner
+          title="The signature is modified and invalid!"
+          detail={failureSummary || `Validation state: ${validationState}`}
+        />
+      )}
+      <div className="manifest-info">
+        <div className="manifest-row"><span>Issuer</span><strong>{sig.issuer || '—'}</strong></div>
+        <div className="manifest-row"><span>Common name</span><strong>{sig.common_name || '—'}</strong></div>
+        <div className="manifest-row"><span>Signed at</span><strong>{sig.time ? new Date(sig.time).toLocaleString() : '—'}</strong></div>
+        <div className="manifest-row"><span>Claim generator</span><strong>{active?.claim_generator || '—'}</strong></div>
+        <div className="manifest-row">
+          <span>Validation</span>
+          <strong className={isInvalid ? 'badge-bad' : 'badge-ok'}>{validationState}</strong>
+        </div>
+        {active?.assertions && active.assertions.length > 0 && (
+          <div className="manifest-row">
+            <span>Assertions</span>
+            <strong>{active.assertions.map(a => a.label).join(', ')}</strong>
+          </div>
+        )}
+      </div>
+      <details className="manifest-raw">
+        <summary>Raw JSON</summary>
+        <pre>{JSON.stringify(manifest, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
+function WatermarkPanel() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState('UNSW CSE');
+  const [downloadUrl, setDownloadUrl] = useState(null);
+  const [downloadName, setDownloadName] = useState(null);
+  const [encodedMessage, setEncodedMessage] = useState(null);
+  const [decoded, setDecoded] = useState(null);
+  const [hasWatermark, setHasWatermark] = useState(null);
+
+  const reset = () => {
+    setFile(null); setPreview(null); setError(null);
+    setDownloadUrl(null); setDownloadName(null); setEncodedMessage(null);
+    setDecoded(null); setHasWatermark(null);
+  };
+
+  const onFile = useCallback((f) => {
+    const err = validateFile(f);
+    if (err) { setError(err); return; }
+    setError(null); setDownloadUrl(null); setDownloadName(null);
+    setEncodedMessage(null); setDecoded(null); setHasWatermark(null);
+    const reader = new FileReader();
+    reader.onloadend = () => { setPreview(reader.result); setFile(f); };
+    reader.readAsDataURL(f);
+  }, []);
+
+  const messageBytes = new TextEncoder().encode(message).length;
+  const messageTooLong = messageBytes > 12;
+
+  const handleEmbed = async () => {
+    if (!file || busy || messageTooLong) return;
+    setBusy('embed'); setError(null); setDecoded(null); setHasWatermark(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('message', message);
+      const resp = await axios.post(`${API_URL}/watermark-upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 180000,
+      });
+      setDownloadUrl(resp.data.download_url);
+      setDownloadName(resp.data.filename);
+      setEncodedMessage(resp.data.encoded_message ?? message);
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDecode = async () => {
+    if (!file || busy) return;
+    setBusy('decode'); setError(null); setDecoded(null); setHasWatermark(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (message) formData.append('expected_message', message);
+      const resp = await axios.post(`${API_URL}/decode-watermark-upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+      const d = resp.data || {};
+      setDecoded({
+        message: d.decoded_message ?? '',
+        bits: d.watermark ?? [],
+        accuracy: d.accuracy ?? null,
+        isText: !!d.is_text,
+      });
+      setHasWatermark(!!d.has_watermark);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!downloadUrl) return;
+    window.location.href = `${API_URL}${downloadUrl}`;
+  };
+
+  return (
+    <section className="feature-panel feature-panel-watermark">
+      <header className="feature-header">
+        <h2 className="feature-title">Invisible Watermarking</h2>
+        <p className="feature-subtitle">Embed and recover invisible watermarks</p>
+      </header>
+
+      <FileDropZone
+        panelId="watermark"
+        file={file}
+        preview={preview}
+        onFile={onFile}
+        onClear={reset}
+        disabled={!!busy}
+      />
+
+      <div className="wm-message-field">
+        <label htmlFor="wm-message-input" className="wm-message-label">
+          Watermark message
+          <span className={`wm-message-counter ${messageTooLong ? 'over' : ''}`}>
+            {messageBytes}/12 bytes
+          </span>
+        </label>
+        <input
+          id="wm-message-input"
+          type="text"
+          className="wm-message-input"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="e.g. your name"
+          disabled={!!busy}
+        />
+        {messageTooLong && (
+          <p className="wm-message-hint">
+            Too long — the watermark stores at most 12 UTF-8 bytes; anything beyond will be truncated.
+          </p>
+        )}
+      </div>
+
+      <div className="feature-actions">
+        <button
+          className="feature-btn primary"
+          onClick={handleEmbed}
+          disabled={!file || !!busy || messageTooLong}
+        >
+          {busy === 'embed' ? (<><span className="btn-spinner"></span>Embedding…</>) : 'Embed watermark'}
+        </button>
+        <button
+          className="feature-btn secondary"
+          onClick={handleDecode}
+          disabled={!file || !!busy}
+        >
+          {busy === 'decode' ? (<><span className="btn-spinner"></span>Decoding…</>) : 'Decode watermark'}
+        </button>
+      </div>
+
+      {error && <div className="feature-error">⚠ {error}</div>}
+
+      {downloadUrl && (
+        <div className="feature-result success">
+          <div className="result-row">
+            <span>✅ Watermark embedded as <strong>“{encodedMessage}”</strong></span>
+          </div>
+          <div className="result-row">
+            <span>File: <code>{downloadName}</code></span>
+          </div>
+          <button className="feature-btn download" onClick={handleDownload}>
+            Download watermarked image
+          </button>
+        </div>
+      )}
+
+      {hasWatermark === false && decoded && (
+        <WarningBanner
+          title="This image is NOT watermarked!"
+          detail={`The decoder returned “${decoded.message || '<unprintable bytes>'}” which doesn't look like real text — usually meaning this image was never watermarked, or the watermark was destroyed.`}
+        />
+      )}
+
+      {hasWatermark === true && decoded && (
+        <div className="feature-result">
+          <h3 className="result-title">Decoded watermark</h3>
+          <DecodedWatermarkView decoded={decoded} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DecodedWatermarkView({ decoded }) {
+  const accBadgeClass = decoded.accuracy != null
+    ? (decoded.accuracy >= 0.95 ? 'badge-ok' : 'badge-warn')
+    : '';
+  return (
+    <div className="watermark-bits-view">
+      <div className="manifest-row">
+        <span>Decoded message</span>
+        <strong className="wm-decoded-message">“{decoded.message || '<empty>'}”</strong>
+      </div>
+      {decoded.accuracy != null && (
+        <div className="manifest-row">
+          <span>Bit accuracy vs expected</span>
+          <strong className={accBadgeClass}>{(decoded.accuracy * 100).toFixed(1)}%</strong>
+        </div>
+      )}
+      <div className="manifest-row">
+        <span>Total bits</span><strong>{decoded.bits.length}</strong>
+      </div>
+      <details className="manifest-raw">
+        <summary>Raw bit pattern</summary>
+        <code className="bit-string">{decoded.bits.join('')}</code>
+      </details>
+    </div>
+  );
+}
+
+function CombinedPanel() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [downloadUrl, setDownloadUrl] = useState(null);
+  const [downloadName, setDownloadName] = useState(null);
+
+  const reset = () => {
+    setFile(null); setPreview(null); setError(null);
+    setDownloadUrl(null); setDownloadName(null);
+  };
+
+  const onFile = useCallback((f) => {
+    const err = validateFile(f);
+    if (err) { setError(err); return; }
+    setError(null); setDownloadUrl(null); setDownloadName(null);
+    const reader = new FileReader();
+    reader.onloadend = () => { setPreview(reader.result); setFile(f); };
+    reader.readAsDataURL(f);
+  }, []);
+
+  const handleRun = async () => {
+    if (!file || busy) return;
+    setBusy(true); setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await axios.post(`${API_URL}/sign-and-watermark-upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 240000,
+      });
+      setDownloadUrl(resp.data.download_url);
+      setDownloadName(resp.data.filename);
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!downloadUrl) return;
+    window.location.href = `${API_URL}${downloadUrl}`;
+  };
+
+  return (
+    <section className="feature-panel feature-panel-combined">
+      <header className="feature-header">
+        <h2 className="feature-title">DCP — full protection</h2>
+        <p className="feature-subtitle">Apply C2PA signing and invisible watermarking in one pass</p>
+      </header>
+
+      <div className="combined-body">
+        <FileDropZone
+          panelId="combined"
+          file={file}
+          preview={preview}
+          onFile={onFile}
+          onClear={reset}
+          disabled={busy}
+        />
+        <div className="feature-actions">
+          <button className="feature-btn primary" onClick={handleRun} disabled={!file || busy}>
+            {busy ? (<><span className="btn-spinner"></span>Processing…</>) : 'Sign & watermark'}
+          </button>
+        </div>
+
+        {error && <div className="feature-error">⚠ {error}</div>}
+
+        {downloadUrl && (
+          <div className="feature-result success">
+            <div className="result-row">
+              <span>✅ Signed &amp; watermarked file ready: <code>{downloadName}</code></span>
+            </div>
+            <button className="feature-btn download" onClick={handleDownload}>
+              Download
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// Extract the human-readable strings we can offer as tamper targets from a
+// manifest. Each entry is { label, value } and we only include ones that look
+// safe to byte-search-and-replace (i.e. unique-ish strings present verbatim in
+// the file). VINE's CBOR encoding embeds these as UTF-8.
+function manifestTamperTargets(manifest) {
+  const activeId = manifest?.active_manifest;
+  const active = activeId && manifest?.manifests ? manifest.manifests[activeId] : null;
+  if (!active) return [];
+  const sig = active.signature_info || {};
+  const candidates = [
+    { label: 'Common name', value: sig.common_name },
+    { label: 'Issuer', value: sig.issuer },
+    { label: 'Claim generator', value: active.claim_generator },
+  ];
+  return candidates.filter(c => typeof c.value === 'string' && c.value.length >= 2);
+}
+
+function TamperPanel() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(null); // 'inspect' | 'tamper-image' | 'tamper-manifest'
+  const [error, setError] = useState(null);
+  const [sourceManifest, setSourceManifest] = useState(null);
+  const [hasC2pa, setHasC2pa] = useState(null);
+  const [downloadUrl, setDownloadUrl] = useState(null);
+  const [downloadName, setDownloadName] = useState(null);
+  const [tamperSummary, setTamperSummary] = useState(null);
+  const [selectedField, setSelectedField] = useState(0);
+  const [newValue, setNewValue] = useState('');
+
+  const reset = () => {
+    setFile(null); setPreview(null); setError(null);
+    setSourceManifest(null); setHasC2pa(null);
+    setDownloadUrl(null); setDownloadName(null); setTamperSummary(null);
+    setSelectedField(0); setNewValue('');
+  };
+
+  const clearOutputs = () => {
+    setDownloadUrl(null); setDownloadName(null); setTamperSummary(null);
+    setError(null);
+  };
+
+  const inspect = async (f) => {
+    setBusy('inspect');
+    try {
+      const fd = new FormData();
+      fd.append('file', f);
+      const resp = await axios.post(`${API_URL}/read-c2pa-upload`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+      if (resp.data.success && resp.data.has_c2pa) {
+        setSourceManifest(resp.data.manifest);
+        setHasC2pa(true);
+        const targets = manifestTamperTargets(resp.data.manifest);
+        if (targets.length > 0) setNewValue(targets[0].value);
+      } else {
+        setHasC2pa(false);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onFile = useCallback((f) => {
+    const err = validateFile(f);
+    if (err) { setError(err); return; }
+    reset();
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result);
+      setFile(f);
+      inspect(f);
+    };
+    reader.readAsDataURL(f);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleTamperImage = async () => {
+    if (!file || busy) return;
+    clearOutputs();
+    setBusy('tamper-image');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const resp = await axios.post(`${API_URL}/tamper-image-upload`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+      setDownloadUrl(resp.data.download_url);
+      setDownloadName(resp.data.filename);
+      setTamperSummary(resp.data.message);
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.details || err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const targets = sourceManifest ? manifestTamperTargets(sourceManifest) : [];
+  const target = targets[selectedField] || null;
+  const oldLen = target ? target.value.length : 0;
+  const newLen = new TextEncoder().encode(newValue).length;
+  // We compare *string length* not byte length because the backend does the
+  // same length check; the warning about UTF-8 is just for the user.
+  const lengthOk = target ? newValue.length === target.value.length : false;
+  const isMultibyte = newLen !== newValue.length;
+
+  const handleTamperManifest = async () => {
+    if (!file || busy || !target || !lengthOk) return;
+    clearOutputs();
+    setBusy('tamper-manifest');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('old_value', target.value);
+      fd.append('new_value', newValue);
+      const resp = await axios.post(`${API_URL}/tamper-manifest-upload`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+      setDownloadUrl(resp.data.download_url);
+      setDownloadName(resp.data.filename);
+      setTamperSummary(resp.data.message);
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.details || err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!downloadUrl) return;
+    window.location.href = `${API_URL}${downloadUrl}`;
+  };
+
+  return (
+    <section className="feature-panel feature-panel-tamper">
+      <header className="feature-header">
+        <h2 className="feature-title">C2PA Tamper</h2>
+        <p className="feature-subtitle">
+          Modify a signed image and watch C2PA verification reject it.
+        </p>
+      </header>
+
+      <FileDropZone
+        panelId="tamper"
+        file={file}
+        preview={preview}
+        onFile={onFile}
+        onClear={reset}
+        disabled={!!busy}
+      />
+
+      {busy === 'inspect' && <div className="feature-result info">Inspecting the uploaded file…</div>}
+
+      {file && hasC2pa === false && (
+        <WarningBanner
+          title="This file is NOT signed!"
+          detail="The C2PA Tamper demo needs a C2PA-signed image. Sign one in the “C2PA” tab first."
+        />
+      )}
+
+      {file && hasC2pa === true && (
+        <>
+          <div className="feature-result info">
+            ✓ This file is signed. Pick a tamper mode below — both should make the signature invalid.
+          </div>
+
+          <div className="tamper-mode-block">
+            <h3 className="tamper-mode-title">A. Modify image pixels</h3>
+            <p className="tamper-mode-desc">
+              Flip ~16 bytes in the compressed image data. The C2PA asset-hash assertion will fail.
+            </p>
+            <div className="feature-actions">
+              <button
+                className="feature-btn primary"
+                onClick={handleTamperImage}
+                disabled={!!busy}
+              >
+                {busy === 'tamper-image'
+                  ? (<><span className="btn-spinner"></span>Tampering…</>)
+                  : 'Tamper image bytes'}
+              </button>
+            </div>
+          </div>
+
+          <div className="tamper-mode-block">
+            <h3 className="tamper-mode-title">B. Modify a manifest field</h3>
+            <p className="tamper-mode-desc">
+              Replace one text field embedded in the signed manifest with a value of equal length.
+              The cryptographic signature over the claim/cert bytes will fail.
+            </p>
+
+            {targets.length === 0 ? (
+              <div className="feature-result info">No tamperable text fields were detected in this manifest.</div>
+            ) : (
+              <div className="tamper-field-form">
+                <label className="wm-message-label" htmlFor="tamper-field-select">
+                  Field to tamper
+                </label>
+                <select
+                  id="tamper-field-select"
+                  className="wm-message-input"
+                  value={selectedField}
+                  onChange={(e) => {
+                    const i = parseInt(e.target.value, 10);
+                    setSelectedField(i);
+                    setNewValue(targets[i]?.value || '');
+                  }}
+                  disabled={!!busy}
+                >
+                  {targets.map((t, i) => (
+                    <option key={i} value={i}>
+                      {t.label}: “{t.value}”
+                    </option>
+                  ))}
+                </select>
+
+                <label className="wm-message-label" htmlFor="tamper-new-value">
+                  New value
+                  <span className={`wm-message-counter ${lengthOk ? '' : 'over'}`}>
+                    {newValue.length}/{oldLen} chars
+                  </span>
+                </label>
+                <input
+                  id="tamper-new-value"
+                  type="text"
+                  className="wm-message-input"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  disabled={!!busy}
+                />
+                {!lengthOk && (
+                  <p className="wm-message-hint">
+                    Must be exactly {oldLen} characters so the file structure stays intact.
+                  </p>
+                )}
+                {isMultibyte && (
+                  <p className="wm-message-hint">
+                    Heads-up: non-ASCII characters take multiple bytes and may not match in the file.
+                  </p>
+                )}
+
+                <div className="feature-actions">
+                  <button
+                    className="feature-btn primary"
+                    onClick={handleTamperManifest}
+                    disabled={!!busy || !lengthOk}
+                  >
+                    {busy === 'tamper-manifest'
+                      ? (<><span className="btn-spinner"></span>Tampering…</>)
+                      : 'Tamper manifest field'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {error && <div className="feature-error">⚠ {error}</div>}
+
+      {downloadUrl && (
+        <div className="feature-result success">
+          <div className="result-row">
+            <span>✅ Tampered file ready: <code>{downloadName}</code></span>
+          </div>
+          {tamperSummary && <div className="result-row"><span>{tamperSummary}</span></div>}
+          <button className="feature-btn download" onClick={handleDownload}>
+            Download tampered file
+          </button>
+        </div>
+      )}
+
+    </section>
+  );
+}
+
+function WatermarkTamperPanel() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(null); // 'inspect' | 'tamper-noise' | 'tamper-recompress'
+  const [error, setError] = useState(null);
+  const [baseline, setBaseline] = useState(null); // { hasWatermark, message, accuracy } of source file
+  const [downloadUrl, setDownloadUrl] = useState(null);
+  const [downloadName, setDownloadName] = useState(null);
+  const [tamperSummary, setTamperSummary] = useState(null);
+
+  const reset = () => {
+    setFile(null); setPreview(null); setError(null);
+    setBaseline(null);
+    setDownloadUrl(null); setDownloadName(null); setTamperSummary(null);
+  };
+
+  const clearOutputs = () => {
+    setDownloadUrl(null); setDownloadName(null); setTamperSummary(null);
+    setError(null);
+  };
+
+  const inspect = async (f) => {
+    setBusy('inspect');
+    try {
+      const fd = new FormData();
+      fd.append('file', f);
+      // Don't pass expected_message here — we just want to detect whether a
+      // watermark exists; the backend's is_text heuristic decides.
+      const resp = await axios.post(`${API_URL}/decode-watermark-upload`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+      const d = resp.data || {};
+      setBaseline({
+        hasWatermark: !!d.has_watermark,
+        message: d.decoded_message ?? '',
+        accuracy: d.accuracy ?? null,
+      });
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onFile = useCallback((f) => {
+    const err = validateFile(f);
+    if (err) { setError(err); return; }
+    reset();
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result);
+      setFile(f);
+      inspect(f);
+    };
+    reader.readAsDataURL(f);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const runTamper = async (endpoint, mode) => {
+    if (!file || busy) return;
+    clearOutputs();
+    setBusy(mode);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const resp = await axios.post(`${API_URL}${endpoint}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
+      });
+      setDownloadUrl(resp.data.download_url);
+      setDownloadName(resp.data.filename);
+      setTamperSummary(resp.data.message);
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.details || err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleNoise = () => runTamper('/tamper-watermark-noise-upload', 'tamper-noise');
+  const handleRecompress = () => runTamper('/tamper-watermark-recompress-upload', 'tamper-recompress');
+
+  const handleDownload = () => {
+    if (!downloadUrl) return;
+    window.location.href = `${API_URL}${downloadUrl}`;
+  };
+
+  return (
+    <section className="feature-panel feature-panel-wm-tamper">
+      <header className="feature-header">
+        <h2 className="feature-title">Invisible Watermark Tamper</h2>
+        <p className="feature-subtitle">
+          Modify a watermarked image and break the decoder's ability to recover the hidden message.
+        </p>
+      </header>
+
+      <FileDropZone
+        panelId="wm-tamper"
+        file={file}
+        preview={preview}
+        onFile={onFile}
+        onClear={reset}
+        disabled={!!busy}
+      />
+
+      {busy === 'inspect' && <div className="feature-result info">Decoding the uploaded file to check for a watermark…</div>}
+
+      {baseline && baseline.hasWatermark === false && (
+        <WarningBanner
+          title="This image is NOT watermarked!"
+          detail="The tamper demo needs an image carrying an invisible watermark. Embed one in the “Invisible Watermarking” tab first."
+        />
+      )}
+
+      {baseline && baseline.hasWatermark === true && (
+        <>
+          <div className="feature-result info">
+            ✓ Watermark detected (decoded: <strong>“{baseline.message}”</strong>
+            {baseline.accuracy != null && <>, accuracy {(baseline.accuracy * 100).toFixed(1)}%</>}).
+            Pick an attack below — both should make the message unrecoverable.
+          </div>
+
+          <div className="tamper-mode-block">
+            <h3 className="tamper-mode-title">A. Add Gaussian noise</h3>
+            <p className="tamper-mode-desc">
+              Add heavy random noise to every pixel (σ=90). The image stays recognizable but the watermark bits are scrambled.
+            </p>
+            <div className="feature-actions">
+              <button
+                className="feature-btn primary"
+                onClick={handleNoise}
+                disabled={!!busy}
+              >
+                {busy === 'tamper-noise'
+                  ? (<><span className="btn-spinner"></span>Adding noise…</>)
+                  : 'Add noise'}
+              </button>
+            </div>
+          </div>
+
+          <div className="tamper-mode-block">
+            <h3 className="tamper-mode-title">B. Aggressive JPEG re-compression</h3>
+            <p className="tamper-mode-desc">
+              Downscale 4× and re-encode as JPEG at quality≈5. Realistic “upload to a low-quality channel” attack.
+            </p>
+            <div className="feature-actions">
+              <button
+                className="feature-btn primary"
+                onClick={handleRecompress}
+                disabled={!!busy}
+              >
+                {busy === 'tamper-recompress'
+                  ? (<><span className="btn-spinner"></span>Re-compressing…</>)
+                  : 'Re-compress JPEG'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {error && <div className="feature-error">⚠ {error}</div>}
+
+      {downloadUrl && (
+        <div className="feature-result success">
+          <div className="result-row">
+            <span>✅ Tampered file ready: <code>{downloadName}</code></span>
+          </div>
+          {tamperSummary && <div className="result-row"><span>{tamperSummary}</span></div>}
+          <button className="feature-btn download" onClick={handleDownload}>
+            Download tampered file
+          </button>
+          <div className="result-row">
+            <span>
+              Drop it into the <strong>Invisible Watermarking</strong> tab and click <strong>Decode watermark</strong> to confirm the message is destroyed.
+            </span>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+const TABS = [
+  { id: 'c2pa',      label: 'C2PA',                       render: () => <C2paPanel /> },
+  { id: 'wm',        label: 'Invisible Watermarking',     render: () => <WatermarkPanel /> },
+  { id: 'combined',  label: 'DCP',                        render: () => <CombinedPanel /> },
+  { id: 'tamper',    label: 'C2PA Tamper',                render: () => <TamperPanel /> },
+  { id: 'wm-tamper', label: 'Invisible Watermark Tamper', render: () => <WatermarkTamperPanel /> },
+];
+
+// Scroll to a section by id, accounting for the sticky nav height.
+function scrollToId(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const navH = 64;
+  const top = el.getBoundingClientRect().top + window.scrollY - navH - 8;
+  window.scrollTo({ top, behavior: 'smooth' });
+}
+
+// Add a 'visible' class to elements with class 'reveal' once they enter the
+// viewport. Plain IntersectionObserver — no third-party dependency.
+function useScrollReveal() {
+  useEffect(() => {
+    const els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(e => e.classList.add('visible'));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    els.forEach(el => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+}
+
+function GlobalNav() {
+  return (
+    <nav className="global-nav" role="navigation" aria-label="Primary">
+      <div className="global-nav-inner">
+        <div className="global-nav-brand" onClick={() => scrollToId('top')}>
+          <div className="global-nav-logo" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </div>
+          <span className="global-nav-brand-acronym">DCP</span>
+          <span className="global-nav-brand-full">— Digital Content Protector</span>
+        </div>
+
+        <div className="global-nav-links">
+          <button className="global-nav-link" onClick={() => scrollToId('features')}>Features</button>
+          <button className="global-nav-link" onClick={() => scrollToId('how')}>How it works</button>
+          <button className="global-nav-link" onClick={() => scrollToId('docs')}>Docs</button>
+          <button className="global-nav-link" onClick={() => scrollToId('usecases')}>Use cases</button>
+          <button className="global-nav-link" onClick={() => scrollToId('team')}>Team</button>
+          <button className="global-nav-cta" onClick={() => scrollToId('demo')}>Try the demo</button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function Hero() {
+  return (
+    <section id="top" className="hero bg-grid-fade">
+      <div className="section-container">
+        <div className="hero-inner">
+          <div className="hero-text reveal">
+            <div className="hero-eyebrow">
+              <span className="hero-eyebrow-dot"></span>
+              Content authenticity, end-to-end
+            </div>
+            <h1 className="hero-title">
+              Prove what's real.<br />
+              <span className="hero-title-accent">Protect what's yours.</span>
+            </h1>
+            <p className="hero-tagline">
+              DCP combines C2PA cryptographic provenance with invisible neural watermarking,
+              so every image you publish carries verifiable proof — and resists tampering even
+              after it leaves your hands.
+            </p>
+            <div className="hero-ctas">
+              <button className="cta cta-primary" onClick={() => scrollToId('demo')}>
+                Try the demo
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+              <button className="cta cta-secondary" onClick={() => scrollToId('how')}>
+                How it works
+              </button>
+            </div>
+          </div>
+
+          <div className="hero-graphic reveal">
+            <img src={fuBaoImage} alt="Protected content example" className="hero-graphic-img" />
+            <div className="hero-badge hero-badge--c2pa">
+              <span className="hero-badge-icon" aria-hidden="true">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+              C2PA signed
+            </div>
+            <div className="hero-badge hero-badge--wm">
+              <span className="hero-badge-icon" aria-hidden="true">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 4.21 16l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.4 1.65 1.65 0 0 0 4.27 6.58l-.06-.06A2 2 0 1 1 7.04 3.7l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .7.4 1.32 1.51 1.51H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </span>
+              Watermarked
+            </div>
+            <div className="hero-badge hero-badge--tamper">
+              <span className="hero-badge-icon" aria-hidden="true">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </span>
+              Tamper-aware
+            </div>
+          </div>
+        </div>
+
+        <div className="highlights-strip reveal">
+          <div className="highlights-strip-item">
+            <span className="highlights-strip-value">C2PA 2.0</span>
+            <span className="highlights-strip-label">Coalition-grade provenance</span>
+          </div>
+          <div className="highlights-strip-item">
+            <span className="highlights-strip-value">Invisible Watermark</span>
+            <span className="highlights-strip-label">Neural pixel-level watermarks</span>
+          </div>
+          <div className="highlights-strip-item">
+            <span className="highlights-strip-value">Tamper-evident</span>
+            <span className="highlights-strip-label">Cryptographic signatures detect any edit</span>
+          </div>
+          <div className="highlights-strip-item">
+            <span className="highlights-strip-value">Open</span>
+            <span className="highlights-strip-label">Built on open standards</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeaturesSection() {
+  return (
+    <section id="features" className="section">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">Capabilities</span>
+          <h2 className="section-title">Two layers of trust. One workflow.</h2>
+          <p className="section-lede">
+            A signed manifest tells a verifier <em>who</em> created an image and <em>when</em>.
+            An invisible watermark survives downloads, screenshots and re-uploads.
+            Together they make tampering both detectable and traceable.
+          </p>
+        </div>
+
+        <div className="features-grid">
+          <div className="feature-card reveal">
+            <div className="feature-card-icon feature-card-icon--c2pa">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </div>
+            <h3 className="feature-card-title">C2PA cryptographic signing</h3>
+            <p className="feature-card-text">
+              Bind each image to its origin with a tamper-evident manifest signed
+              by a trusted certificate. Anyone can verify the chain of custody
+              without contacting you.
+            </p>
+          </div>
+
+          <div className="feature-card reveal">
+            <div className="feature-card-icon feature-card-icon--wm">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            </div>
+            <h3 className="feature-card-title">Invisible neural watermarks</h3>
+            <p className="feature-card-text">
+              Our decoder embeds a recoverable 12-byte message directly into the pixels.
+              The image looks identical to the eye yet carries provenance even
+              when metadata is stripped.
+            </p>
+          </div>
+
+          <div className="feature-card reveal">
+            <div className="feature-card-icon feature-card-icon--guard">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <h3 className="feature-card-title">Tamper detection</h3>
+            <p className="feature-card-text">
+              Any pixel-level edit invalidates the C2PA asset hash. Any aggressive
+              re-compression or noise attack collapses the watermark. Both signals
+              are surfaced clearly to the viewer.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HowItWorksSection() {
+  return (
+    <section id="how" className="section section--alt">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">Workflow</span>
+          <h2 className="section-title">Three steps from raw image to verifiable asset.</h2>
+          <p className="section-lede">
+            DCP keeps the pipeline simple: upload, protect, share. Verification is
+            a single drag-and-drop away for anyone receiving the file.
+          </p>
+        </div>
+
+        <div className="steps">
+          <div className="step reveal">
+            <div className="step-number">1</div>
+            <h3 className="step-title">Upload an image</h3>
+            <p className="step-text">
+              Drop a JPEG or PNG into the demo. Everything runs locally against
+              the bundled Docker stack — your file never leaves your machine.
+            </p>
+          </div>
+          <div className="step reveal">
+            <div className="step-number">2</div>
+            <h3 className="step-title">Sign &amp; watermark</h3>
+            <p className="step-text">
+              C2PA signs the file with a trusted certificate. The neural
+              encoder embeds a user-supplied 12-byte message into the pixels.
+              Both happen in seconds, in any order, or together in one pass.
+            </p>
+          </div>
+          <div className="step reveal">
+            <div className="step-number">3</div>
+            <h3 className="step-title">Verify anywhere</h3>
+            <p className="step-text">
+              Any recipient can drop the file back in to read the manifest and
+              recover the watermark. Tampering shows up loud and red — no
+              guesswork required.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// One node in a flow diagram. Variant "input" / "process" / "output" gives a colour hint.
+function FlowNode({ children, variant = 'process', mono = false }) {
+  return (
+    <div className={`flow-node flow-node--${variant} ${mono ? 'flow-node--mono' : ''}`}>
+      {children}
+    </div>
+  );
+}
+
+function FlowArrow({ label, direction = 'right' }) {
+  return (
+    <div className={`flow-arrow flow-arrow--${direction}`}>
+      {label && <span className="flow-arrow-label">{label}</span>}
+      <svg width="24" height="14" viewBox="0 0 24 14" fill="none" aria-hidden="true">
+        {direction === 'right' ? (
+          <path d="M0 7h22M16 1l6 6-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        ) : (
+          <path d="M24 7H2M8 1L2 7l6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        )}
+      </svg>
+    </div>
+  );
+}
+
+function DocsSection() {
+  return (
+    <section id="docs" className="section section--alt">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">Technical documentation</span>
+          <h2 className="section-title">How DCP works under the hood.</h2>
+          <p className="section-lede">
+            DCP layers two independent trust mechanisms over the same image:
+            a cryptographic provenance manifest (C2PA) and a neural pixel-level
+            watermark. The sections below walk through each pipeline, the data
+            it produces, and why tampering is detectable in both layers.
+          </p>
+        </div>
+
+        {/* ---------------- C2PA ---------------- */}
+        <article className="docs-block reveal">
+          <header className="docs-block-header">
+            <span className="docs-block-tag docs-block-tag--c2pa">Layer 1</span>
+            <h3 className="docs-block-title">C2PA — Cryptographic Provenance</h3>
+            <p className="docs-block-lede">
+              The Coalition for Content Provenance and Authenticity (C2PA)
+              defines an open standard for tamper-evident provenance metadata
+              embedded directly in media files. A signed <em>manifest</em>
+              binds together <em>assertions</em> about who created the asset,
+              when, with what tools, and a cryptographic hash of the asset
+              bytes themselves.
+            </p>
+          </header>
+
+          <h4 className="docs-subtitle">Signing pipeline</h4>
+          <div className="flow flow--row">
+            <FlowNode variant="input">Original<br />image</FlowNode>
+            <FlowArrow />
+            <FlowNode>Assertions<br /><span className="flow-node-sub">actions, hashes, thumbnail</span></FlowNode>
+            <FlowArrow />
+            <FlowNode>Build claim<br /><span className="flow-node-sub">CBOR-encoded</span></FlowNode>
+            <FlowArrow label="sign" />
+            <FlowNode variant="key" mono>Signer<br /><span className="flow-node-sub">cert + private key</span></FlowNode>
+            <FlowArrow />
+            <FlowNode>Embed JUMBF<br /><span className="flow-node-sub">in JPEG / PNG box</span></FlowNode>
+            <FlowArrow />
+            <FlowNode variant="output">Signed<br />image</FlowNode>
+          </div>
+
+          <h4 className="docs-subtitle">Verification pipeline</h4>
+          <div className="flow flow--row">
+            <FlowNode variant="input">Received<br />image</FlowNode>
+            <FlowArrow />
+            <FlowNode>Parse JUMBF<br /><span className="flow-node-sub">extract manifest</span></FlowNode>
+            <FlowArrow />
+            <FlowNode>Verify signature<br /><span className="flow-node-sub">against cert chain</span></FlowNode>
+            <FlowArrow />
+            <FlowNode>Re-hash asset<br /><span className="flow-node-sub">compare to claim</span></FlowNode>
+            <FlowArrow />
+            <FlowNode variant="output">Valid&nbsp;✓ or<br />Invalid&nbsp;⚠</FlowNode>
+          </div>
+
+          <h4 className="docs-subtitle">Key concepts</h4>
+          <div className="docs-concepts">
+            <div className="docs-concept">
+              <h5>Manifest</h5>
+              <p>The top-level container. Holds one claim plus its assertions, signature, and any embedded thumbnails. Stored inside a JUMBF box appended to the image.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Claim</h5>
+              <p>A CBOR-encoded statement that references and hashes a set of assertions. Signed once; everything else is derived from it.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Assertions</h5>
+              <p>Individual facts about the asset: <code>c2pa.actions</code> (created / edited), <code>c2pa.hash.data</code> (asset bytes hash), <code>c2pa.thumbnail.claim</code> and more.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Signature</h5>
+              <p>A COSE_Sign1 envelope over the claim CBOR, bound to a leaf X.509 certificate. Anyone can verify the chain without contacting the signer.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>JUMBF</h5>
+              <p>JPEG Universal Metadata Box Format. The container standard used to embed the entire manifest into JPEG, PNG, MP4 and other media as a self-contained binary blob.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Validation result</h5>
+              <p>Per-assertion success / failure codes (<code>assertion.hashedURI.mismatch</code>, <code>claimSignature.mismatch</code>, …). DCP surfaces these as the red warning when anything fails.</p>
+            </div>
+          </div>
+
+          <div className="docs-callout">
+            <strong>Why tampering is detectable:</strong> any pixel-level edit changes the
+            asset hash, breaking the <code>c2pa.hash.data</code> assertion. Editing
+            text inside the manifest itself (e.g. a certificate subject byte) changes
+            the bytes covered by the signature, breaking
+            <code>claimSignature.mismatch</code>. The image and the manifest are
+            cryptographically interlocked.
+          </div>
+        </article>
+
+        {/* ---------------- Invisible watermarking ---------------- */}
+        <article className="docs-block reveal">
+          <header className="docs-block-header">
+            <span className="docs-block-tag docs-block-tag--wm">Layer 2</span>
+            <h3 className="docs-block-title">Invisible Watermarking — Neural Encoder / Decoder</h3>
+            <p className="docs-block-lede">
+              Where C2PA lives in the metadata, the invisible watermark lives in
+              the pixels themselves. A pair of trained neural networks embed a
+              fixed-length message into the image with no human-visible
+              difference, and recover that message later — even after the image
+              has been re-encoded, downloaded, or screenshotted.
+            </p>
+          </header>
+
+          <h4 className="docs-subtitle">Encoding pipeline</h4>
+          <div className="flow flow--row">
+            <FlowNode variant="input">Original<br />image</FlowNode>
+            <FlowArrow />
+            <FlowNode variant="model">Encoder<br /><span className="flow-node-sub">U-Net-style CNN</span></FlowNode>
+            <FlowArrow />
+            <FlowNode variant="output">Watermarked<br />image</FlowNode>
+            <div className="flow-stack-divider">+</div>
+            <FlowNode mono>Message<br /><span className="flow-node-sub">12 UTF-8 bytes ≈ 96 bits</span></FlowNode>
+          </div>
+
+          <h4 className="docs-subtitle">Decoding pipeline (with realistic channel)</h4>
+          <div className="flow flow--row">
+            <FlowNode variant="input">Watermarked<br />image</FlowNode>
+            <FlowArrow label="channel" />
+            <FlowNode variant="distortion">JPEG re-encode<br />noise · crop · scale</FlowNode>
+            <FlowArrow />
+            <FlowNode variant="model">Decoder<br /><span className="flow-node-sub">CNN classifier per bit</span></FlowNode>
+            <FlowArrow />
+            <FlowNode variant="output">Recovered bits<br /><span className="flow-node-sub">+ confidence</span></FlowNode>
+          </div>
+
+          <h4 className="docs-subtitle">Key concepts</h4>
+          <div className="docs-concepts">
+            <div className="docs-concept">
+              <h5>Encoder</h5>
+              <p>A convolutional network that takes <em>(image, message bits)</em> and outputs a residual added to the image. Trained so the residual is statistically invisible.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Decoder</h5>
+              <p>A separate convolutional network that maps the (possibly tampered) image back to a bit vector. Trained jointly with the encoder.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Robustness layer</h5>
+              <p>Training applies random transformations (JPEG, noise, crop, resize) <em>between</em> encoder and decoder so the decoder learns to be invariant to common channel distortions.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Capacity</h5>
+              <p>~96-bit payload by default. DCP exposes this as a 12-character UTF-8 string — long enough for a user ID, content hash prefix or short license tag.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Imperceptibility</h5>
+              <p>Loss objective penalises perceptual difference (LPIPS / SSIM-style) so the watermark stays under the human-visible threshold even at high payload.</p>
+            </div>
+            <div className="docs-concept">
+              <h5>Decoded accuracy</h5>
+              <p>Reported as the per-bit agreement with the embedded message. Above ~85% the recovered text is reliable; below that the message is considered destroyed.</p>
+            </div>
+          </div>
+
+          <div className="docs-callout">
+            <strong>Complementary trust signals:</strong> a C2PA manifest can be
+            stripped by a re-uploader, but the invisible watermark survives.
+            Pixel tampering breaks C2PA's hash assertion but the watermark may
+            still partially decode. Aggressive transforms destroy the watermark
+            but a re-signed C2PA manifest still proves who issued the file.
+            Stacking both gives you a defence-in-depth posture.
+          </div>
+        </article>
+
+        {/* ---------------- DCP combined ---------------- */}
+        <article className="docs-block reveal">
+          <header className="docs-block-header">
+            <span className="docs-block-tag docs-block-tag--dcp">DCP</span>
+            <h3 className="docs-block-title">End-to-end DCP pipeline</h3>
+            <p className="docs-block-lede">
+              Both layers are applied to the same asset in one pass. The
+              ordering matters: watermarking first lets the watermark be
+              authenticated by the C2PA signature too.
+            </p>
+          </header>
+          <div className="flow flow--row">
+            <FlowNode variant="input">Image +<br />Message</FlowNode>
+            <FlowArrow />
+            <FlowNode variant="model">Watermark<br /><span className="flow-node-sub">neural encoder</span></FlowNode>
+            <FlowArrow />
+            <FlowNode>Watermarked<br />image</FlowNode>
+            <FlowArrow />
+            <FlowNode variant="key" mono>C2PA signer<br /><span className="flow-node-sub">cert + private key</span></FlowNode>
+            <FlowArrow />
+            <FlowNode variant="output">Signed +<br />watermarked</FlowNode>
+          </div>
+          <p className="docs-block-foot">
+            On the verification side a recipient runs the C2PA reader (this
+            page's <strong>C2PA</strong> tab) and the watermark decoder (the
+            <strong> Invisible Watermarking</strong> tab) against the same file.
+            DCP renders a red warning the moment either signal fails — even if
+            the other still validates.
+          </p>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function UseCasesSection() {
+  const cases = [
+    {
+      title: 'Journalism & newsrooms',
+      text: 'Stamp every press photo at the moment of capture so an editor downstream can prove the image is original.',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+          <path d="M18 14h-8" /><path d="M15 18h-5" /><path d="M10 6h8v4h-8V6z" />
+        </svg>
+      ),
+    },
+    {
+      title: 'AI-generated content',
+      text: 'Watermark every model output and sign it with the generator’s identity, so AI vs. real provenance is unambiguous.',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <path d="M9 9h6v6H9z" /><path d="M9 3v2" /><path d="M15 3v2" /><path d="M9 19v2" /><path d="M15 19v2" /><path d="M3 9h2" /><path d="M3 15h2" /><path d="M19 9h2" /><path d="M19 15h2" />
+        </svg>
+      ),
+    },
+    {
+      title: 'Social platforms',
+      text: 'Surface a verified badge next to authenticated uploads. Auto-flag images whose watermark accuracy collapses on ingest.',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      ),
+    },
+    {
+      title: 'E-commerce & catalogues',
+      text: 'Bind product imagery to a verified brand so resellers can’t pass off altered shots as official.',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <section id="usecases" className="section">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">Use cases</span>
+          <h2 className="section-title">Built for anywhere images need to be trusted.</h2>
+          <p className="section-lede">
+            Provenance + watermarking is a foundational layer that complements
+            existing CMS, DAM and platform tooling — not a replacement.
+          </p>
+        </div>
+
+        <div className="usecases-grid">
+          {cases.map((c) => (
+            <div className="usecase-card reveal" key={c.title}>
+              <div className="usecase-icon" aria-hidden="true">{c.icon}</div>
+              <div>
+                <h3 className="usecase-title">{c.title}</h3>
+                <p className="usecase-text">{c.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DemoSection() {
+  const [active, setActive] = useState('c2pa');
+  const activeTab = TABS.find(t => t.id === active) || TABS[0];
+  return (
+    <section id="demo" className="demo-section">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">Live demo</span>
+          <h2 className="section-title">Try every capability in your browser.</h2>
+          <p className="section-lede">
+            Each tab is independent — sign an image, embed an invisible watermark,
+            simulate an attacker tampering with the result, or run the whole pipeline at once.
+          </p>
+        </div>
+
+        <div className="demo-shell reveal">
+          <div className="tab-bar" role="tablist">
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={active === t.id}
+                className={`tab-btn ${active === t.id ? 'active' : ''}`}
+                onClick={() => setActive(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="tab-panel">
+            {activeTab.render()}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TeamSection() {
+  const members = [
+    {
+      name: 'Wei Song',
+      role: 'Postdoctoral Researcher · UNSW',
+      photo: teamWeiSong,
+      bio: 'Works on the security, reliability and real-world deployment of AI-enabled systems — including trustworthy media, adversarial robustness, and multimodal model safety.',
+      url: 'https://wweisong.github.io/',
+    },
+    {
+      name: 'Yulei Sui',
+      role: 'Scientia Associate Professor · UNSW',
+      photo: teamYuleiSui,
+      bio: 'ARC Future Fellow and Fellow of Engineers Australia. Builds open-source frameworks for static program analysis and verification, and studies the intersection of programming languages and code LLMs.',
+      url: 'https://yuleisui.github.io/',
+    },
+    {
+      name: 'Zhenchang Xing',
+      role: 'Senior Principal Research Scientist · CSIRO Data61',
+      photo: teamZhenchangXing,
+      bio: 'Leads the SE4AI team at Data61. Research focuses on knowledge-graph methods, behaviour analytics, and tooling for responsible AI in software engineering.',
+      url: 'https://people.csiro.au/X/Z/Zhenchang-Xing/',
+    },
+    {
+      name: 'Jingling Xue',
+      role: 'Scientia Professor · UNSW',
+      photo: teamJinglingXue,
+      bio: 'Leads the Programming Languages and Compilers group at UNSW. Research spans compiler techniques, pointer/alias analysis at million-line scale, and static and dynamic program analysis.',
+      url: 'https://cgi.cse.unsw.edu.au/~jingling/',
+    },
+  ];
+
+  return (
+    <section id="team" className="section section--alt">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">Team</span>
+          <h2 className="section-title">A collaboration between UNSW CSE and CSIRO Data61.</h2>
+          <p className="section-lede">
+            DCP is built by researchers working across content provenance,
+            program analysis, neural media security and responsible-AI tooling.
+          </p>
+        </div>
+
+        <div className="partners-row reveal">
+          <img src={unswLogo}   alt="UNSW Logo"   className="partners-logo" />
+          <img src={data61Logo} alt="Data61 Logo" className="partners-logo" />
+        </div>
+
+        <div className="team-grid">
+          {members.map((m) => (
+            <a className="team-card reveal" key={m.name} href={m.url} target="_blank" rel="noopener noreferrer">
+              <img src={m.photo} alt={`${m.name} portrait`} className="team-photo" />
+              <div className="team-name">{m.name}</div>
+              <div className="team-role">{m.role}</div>
+              <p className="team-bio">{m.bio}</p>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="footer" role="contentinfo">
+      <div className="section-container">
+        <div className="footer-inner">
+          <div className="footer-brand-block">
+            <div className="footer-brand">
+              <div className="global-nav-logo" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              </div>
+              Digital Content Protector
+            </div>
+            <p className="footer-tagline">
+              C2PA-grade provenance and invisible neural watermarking, in one
+              open research stack.
+            </p>
+          </div>
+          <div>
+            <div className="footer-col-title">Product</div>
+            <button className="footer-link" onClick={() => scrollToId('features')}>Features</button>
+            <button className="footer-link" onClick={() => scrollToId('how')}>How it works</button>
+            <button className="footer-link" onClick={() => scrollToId('docs')}>Docs</button>
+            <button className="footer-link" onClick={() => scrollToId('demo')}>Live demo</button>
+          </div>
+          <div>
+            <div className="footer-col-title">Project</div>
+            <button className="footer-link" onClick={() => scrollToId('usecases')}>Use cases</button>
+            <button className="footer-link" onClick={() => scrollToId('team')}>Team</button>
+          </div>
+          <div>
+            <div className="footer-col-title">Partners</div>
+            <div className="footer-partners-row">
+              <img src={unswLogo}   alt="UNSW Logo"   className="footer-partner-logo" />
+              <img src={data61Logo} alt="Data61 Logo" className="footer-partner-logo" />
+            </div>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <span>© UNSW CSE FutureAI 2026 — Digital Content Protector</span>
+          <span>Built on C2PA · Neural watermarking · open infrastructure</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function App() {
+  useScrollReveal();
+  return (
+    <div className="App">
+      <GlobalNav />
+      <Hero />
+      <FeaturesSection />
+      <HowItWorksSection />
+      <DocsSection />
+      <UseCasesSection />
+      <DemoSection />
+      <TeamSection />
+      <Footer />
+    </div>
+  );
+}
+
+export default App;

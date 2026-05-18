@@ -1,0 +1,117 @@
+services:
+  localstack-main:
+    # Pinned to 3.x community: LocalStack 4.x started requiring LOCALSTACK_AUTH_TOKEN
+    # even for basic services like KMS, which makes the unauthenticated `latest`
+    # tag exit with code 55. The 3.x line still ships a free community edition.
+    image: localstack/localstack:3
+    container_name: localstack-main
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - SERVICES=kms,iam
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - local-data:/var/lib/localstack
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  local-setup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: local-setup
+    container_name: local-setup
+    depends_on:
+      localstack-main:
+        condition: service_healthy
+    environment:
+      - AWS_ENDPOINT=http://localstack-main:4566
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - ./local_volume:/usr/src/app/local_volume
+      - ./config_volume:/usr/src/app/config_volume
+    networks:
+      - default
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "test", "-f", "local_volume/.env"]
+      interval: 5s
+      timeout: 3s
+      retries: 1
+      start_period: 120s
+
+  local-signer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    container_name: local-signer
+    depends_on:
+      local-setup:
+        condition: service_completed_successfully
+    ports:
+      # Host port 5050 -> container port 5000. Mac's AirPlay Receiver holds 5000,
+      # so we expose on 5050. Other containers still reach the signer over the
+      # docker network at local-signer:5000.
+      - "5050:5000"
+    environment:
+      - AWS_ENDPOINT=http://localstack-main:4566
+      - AWS_DEFAULT_REGION=us-east-1
+      - ENV_FILE_PATH=local_volume/.env
+    volumes:
+      - ./local_volume:/usr/src/app/local_volume
+      - ./wait-for-env.sh:/usr/src/app/wait-for-env.sh
+    entrypoint: ["/bin/bash", "/usr/src/app/wait-for-env.sh", "python", "app.py"]
+    # Healthcheck disabled temporarily - will be enabled once signer is stable
+    # healthcheck:
+    #   test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health').read()\" || exit 1"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 10
+    #   start_period: 300s
+    restart: on-failure:3
+    networks:
+      - default
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: client
+    container_name: local-client
+    depends_on:
+      local-signer:
+        condition: service_started
+    environment:
+      - AWS_ENDPOINT=http://localstack-main:4566
+      - AWS_DEFAULT_REGION=us-east-1
+      - CLIENT_ENV_FILE_PATH=local_volume/.env
+    volumes:
+      - ./client_volume:/usr/src/app/client_volume
+      - ./local_volume:/usr/src/app/local_volume
+      - ./tests:/usr/src/app/tests  # Mount tests directory so code changes take effect immediately
+    networks:
+      - default
+    restart: "no"
+    profiles:
+      - client
+    deploy:
+      restart_policy:
+        condition: "no"
+
+volumes:
+  local-data:
+    driver: local
+
+networks:
+  default:
+    name: c2pa-python-example_default

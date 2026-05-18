@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: demo/backend/Dockerfile
+    container_name: videomark-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount VINE directory (read-only, for imports)
+      - ../VINE:/app/VINE:ro
+      # Mount backend directory for development (optional, comment out for production)
+      - ./backend:/app/backend
+      # Mount C2PA directory if needed
+      - ../c2pa-python-example:/app/c2pa-python-example:ro
+    environment:
+      - PYTHONPATH=/app/VINE:/app
+      - CONDA_DEFAULT_ENV=fairimage
+    networks:
+      - videomark-network
+    # For GPU support, uncomment the following:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+networks:
+  videomark-network:
+    driver: bridge
