@@ -142,8 +142,42 @@ def get_image_mime_type(file_path: str) -> str:
 
 
 # Example manifest - simplified to match working app.py structure
-def create_manifest():
-    """Create a manifest JSON string"""
+def create_manifest(author=None, title=None):
+    """Create a manifest JSON string. If author/title are provided, add a
+    Schema.org CreativeWork assertion so they appear in the verified manifest
+    alongside the cert-derived common_name / issuer."""
+    assertions = [
+        {
+            "label": "c2pa.actions",
+            "data": {
+                "actions": [
+                    {
+                        "action": "c2pa.created",
+                        "softwareAgent": {
+                            "name": "C2PA Python Example",
+                            "version": "0.2.0"
+                        },
+                        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCreation"
+                    }
+                ]
+            }
+        }
+    ]
+
+    if author or title:
+        cw = {
+            "@context": "https://schema.org",
+            "@type": "CreativeWork",
+        }
+        if author:
+            cw["author"] = [{"@type": "Person", "name": author}]
+        if title:
+            cw["name"] = title
+        assertions.append({
+            "label": "stds.schema-org.CreativeWork",
+            "data": cw,
+        })
+
     return json.dumps({
         "claim_generator_info": [
             {
@@ -151,23 +185,7 @@ def create_manifest():
                 "version": "0.0.1"
             }
         ],
-        "assertions": [
-            {
-                "label": "c2pa.actions",
-                "data": {
-                    "actions": [
-                        {
-                            "action": "c2pa.created",
-                            "softwareAgent": {
-                                "name": "C2PA Python Example",
-                                "version": "0.2.0"
-                            },
-                            "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCreation"
-                        }
-                    ]
-                }
-            }
-        ]
+        "assertions": assertions,
     })
 
 # Example of a manifest ingredient
@@ -186,6 +204,10 @@ parser = argparse.ArgumentParser(description="Sign files with C2PA.")
 parser.add_argument("files", metavar="F", type=str, nargs="+", help="Files to be signed")
 parser.add_argument("-o", "--output", type=str, required=True, help="Output directory")
 parser.add_argument("-f", "--envfile", type=str, required=False, help="Config environment file")
+parser.add_argument("--author", type=str, default=None,
+                    help="Optional author name to embed as a Schema.org CreativeWork assertion")
+parser.add_argument("--title", type=str, default=None,
+                    help="Optional work title to embed as a Schema.org CreativeWork assertion")
 
 args = parser.parse_args()
 
@@ -269,7 +291,7 @@ for file in args.files:
                 raise
         
         # Create manifest for this file
-        file_manifest = create_manifest()
+        file_manifest = create_manifest(author=args.author, title=args.title)
         
         with Builder(file_manifest) as builder:
             # Add thumbnail resource (optional, for metadata)

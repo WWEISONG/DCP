@@ -1145,6 +1145,60 @@ a:hover { color: var(--color-accent-hover); }
 .wm-message-hint { margin: 0; color: var(--color-error); font-size: 0.82rem; }
 .wm-decoded-message { font-family: var(--font-mono); color: var(--color-accent-hover); }
 
+.wm-message-input--derived {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  color: var(--color-accent-hover);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.wm-message-hint--info {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.wm-c2pa-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+}
+.wm-c2pa-toggle input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  width: 16px; height: 16px;
+  cursor: pointer;
+}
+
+/* Author/Title input grid in C2PA + DCP panels */
+.manifest-input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 540px) {
+  .manifest-input-grid { grid-template-columns: 1fr; }
+}
+.manifest-input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.manifest-input-hint {
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  font-size: 0.8rem;
+  margin-left: 6px;
+}
+
 /* Tamper sub-blocks */
 .tamper-mode-block {
   background: var(--color-secondary-subtle);

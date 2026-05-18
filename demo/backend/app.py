@@ -4,6 +4,7 @@ import signal
 import sys
 import atexit
 import shutil
+import shlex
 import socket
 try:
     import pwd
@@ -457,15 +458,25 @@ def upload_file():
         # Use the temporary .env file instead of the default one
         # Ensure the container joins the same network by using the network name explicitly
         # The network name is c2pa-python-example_default
+        # Optional author/title go into a CreativeWork assertion via client.py
+        # --author / --title flags (we added these in c2pa-python-example).
+        entrypoint = f'python tests/client.py {container_input_path} -o {client_output_dir}'
+        _author = (request.form.get('author') or '').strip()
+        _title  = (request.form.get('title') or '').strip()
+        if _author:
+            entrypoint += f' --author {shlex.quote(_author)}'
+        if _title:
+            entrypoint += f' --title {shlex.quote(_title)}'
+
         docker_cmd = [
-            'docker', 'compose', 
+            'docker', 'compose',
             'run',
             '--rm',  # Remove container after running
             '-e', f'CLIENT_ENV_FILE_PATH=client_volume/.env.client',  # Use our temp .env file
-            '--entrypoint', f'python tests/client.py {container_input_path} -o {client_output_dir}',
+            '--entrypoint', entrypoint,
             'client'
         ]
-        
+
         print(f"Running docker command: {' '.join(docker_cmd)}")
         print(f"Input file: {client_input_path} (exists: {os.path.exists(client_input_path)})")
         print(f"Output dir: {os.path.join(C2PA_DIR, client_output_dir)}")
@@ -1263,18 +1274,27 @@ def sign_and_watermark_upload():
             # Run the signing command (same as /upload endpoint)
             client_output_dir = 'client_volume/signed-images'
             os.makedirs(os.path.join(C2PA_DIR, client_output_dir), exist_ok=True)
-            
+
             container_input_path = f'client_volume/input-images/{watermarked_filename}'
-            
+
+            # Same author/title forwarding as /upload
+            entrypoint = f'python tests/client.py {container_input_path} -o {client_output_dir}'
+            _author = (request.form.get('author') or '').strip()
+            _title  = (request.form.get('title') or '').strip()
+            if _author:
+                entrypoint += f' --author {shlex.quote(_author)}'
+            if _title:
+                entrypoint += f' --title {shlex.quote(_title)}'
+
             docker_cmd = [
-                'docker', 'compose', 
+                'docker', 'compose',
                 'run',
                 '--rm',
                 '-e', f'CLIENT_ENV_FILE_PATH=client_volume/.env.client',
-                '--entrypoint', f'python tests/client.py {container_input_path} -o {client_output_dir}',
+                '--entrypoint', entrypoint,
                 'client'
             ]
-            
+
             try:
                 result = subprocess.run(
                     docker_cmd,
@@ -1756,7 +1776,7 @@ def tamper_watermark_noise_upload():
         return jsonify({'error': 'Invalid file type. Only JPG, JPEG, PNG allowed'}), 400
 
     try:
-        from PIL import Image
+        from PIL import Image, ImageFilter
         import numpy as np
 
         filename = secure_filename(file.filename)
@@ -1767,12 +1787,21 @@ def tamper_watermark_noise_upload():
             with Image.open(temp_in) as img:
                 if img.mode not in ('RGB', 'L'):
                     img = img.convert('RGB')
+
+                # Combo attack — visually mild but effective against neural
+                # watermarks:
+                #  1. small Gaussian blur kills the high-frequency components
+                #     where the watermark lives (subjectively just "slight
+                #     softness", almost imperceptible)
+                #  2. modest Gaussian noise on top adds a low grain that the
+                #     decoder can't lock onto
+                # The image stays clearly recognisable; the decoded message
+                # comes back as garbled bytes that fail the text heuristic.
+                blur_radius = 1.5
+                sigma = 35.0
+                img = img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
                 arr = np.array(img, dtype=np.float32)
 
-            # VINE is surprisingly robust to mild noise (it stays above the 0.85
-            # bit-accuracy threshold even at sigma=40). Use a much larger sigma
-            # so the demo reliably collapses the recovery.
-            sigma = 90.0
             rng = np.random.default_rng(seed=0xC2BA)  # deterministic for demo
             noise = rng.normal(0.0, sigma, size=arr.shape).astype(np.float32)
             noisy = np.clip(arr + noise, 0, 255).astype(np.uint8)
@@ -1787,7 +1816,7 @@ def tamper_watermark_noise_upload():
             'success': True,
             'filename': tampered_name,
             'download_url': f'/download/{file_id}/{tampered_name}',
-            'message': f'Added Gaussian noise (sigma={int(sigma)}) to every pixel',
+            'message': f'Slight blur (r={blur_radius}) + light Gaussian noise (σ={int(sigma)})',
             'tamper_mode': 'watermark-noise',
         }), 200
     except Exception as e:

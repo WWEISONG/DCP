@@ -119,11 +119,14 @@ function C2paPanel() {
   const [downloadName, setDownloadName] = useState(null);
   const [manifest, setManifest] = useState(null);
   const [hasC2pa, setHasC2pa] = useState(null);
+  const [author, setAuthor] = useState('');
+  const [title, setTitle] = useState('');
 
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null);
     setManifest(null); setHasC2pa(null);
+    setAuthor(''); setTitle('');
   };
 
   const onFile = useCallback((f) => {
@@ -142,6 +145,8 @@ function C2paPanel() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (author.trim()) formData.append('author', author.trim());
+      if (title.trim())  formData.append('title',  title.trim());
       const resp = await axios.post(`${API_URL}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 180000,
@@ -223,6 +228,35 @@ function C2paPanel() {
         disabled={!!busy}
       />
 
+      <div className="manifest-input-grid">
+        <div className="manifest-input-field">
+          <label htmlFor="c2pa-author" className="wm-message-label">Author <span className="manifest-input-hint">(optional)</span></label>
+          <input
+            id="c2pa-author"
+            type="text"
+            className="wm-message-input"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            placeholder="e.g. Wei Song"
+            maxLength={120}
+            disabled={!!busy}
+          />
+        </div>
+        <div className="manifest-input-field">
+          <label htmlFor="c2pa-title" className="wm-message-label">Title <span className="manifest-input-hint">(optional)</span></label>
+          <input
+            id="c2pa-title"
+            type="text"
+            className="wm-message-input"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. UNSW campus photo"
+            maxLength={120}
+            disabled={!!busy}
+          />
+        </div>
+      </div>
+
       <div className="feature-actions">
         <button
           className="feature-btn primary"
@@ -274,6 +308,14 @@ function C2paManifestView({ manifest }) {
   const validationState = manifest.validation_state || 'unknown';
   const isInvalid = validationState && validationState !== 'Valid';
 
+  // If a stds.schema-org.CreativeWork assertion was added at sign time, pull
+  // out the human-readable Author/Title so we can show them prominently.
+  const creativeWork = (active?.assertions || []).find(
+    a => a.label === 'stds.schema-org.CreativeWork'
+  )?.data;
+  const author = creativeWork?.author?.[0]?.name || null;
+  const workTitle = creativeWork?.name || null;
+
   // Pull a concise list of failure explanations so we can show them with the warning.
   const failures = manifest?.validation_results?.activeManifest?.failure || [];
   const failureSummary = failures
@@ -291,6 +333,12 @@ function C2paManifestView({ manifest }) {
         />
       )}
       <div className="manifest-info">
+        {author && (
+          <div className="manifest-row"><span>Author (claimed)</span><strong>{author}</strong></div>
+        )}
+        {workTitle && (
+          <div className="manifest-row"><span>Title (claimed)</span><strong>{workTitle}</strong></div>
+        )}
         <div className="manifest-row"><span>Issuer</span><strong>{sig.issuer || '—'}</strong></div>
         <div className="manifest-row"><span>Common name</span><strong>{sig.common_name || '—'}</strong></div>
         <div className="manifest-row"><span>Signed at</span><strong>{sig.time ? new Date(sig.time).toLocaleString() : '—'}</strong></div>
@@ -326,10 +374,16 @@ function WatermarkPanel() {
   const [decoded, setDecoded] = useState(null);
   const [hasWatermark, setHasWatermark] = useState(null);
 
+  // C2PA-derived watermark option ----
+  const [useC2paHash, setUseC2paHash] = useState(false);
+  const [derivedHash, setDerivedHash] = useState(null);
+  const [hashStatus, setHashStatus] = useState(null); // null | 'deriving' | 'ok' | 'no-c2pa'
+
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null); setEncodedMessage(null);
     setDecoded(null); setHasWatermark(null);
+    setDerivedHash(null); setHashStatus(null);
   };
 
   const onFile = useCallback((f) => {
@@ -337,13 +391,59 @@ function WatermarkPanel() {
     if (err) { setError(err); return; }
     setError(null); setDownloadUrl(null); setDownloadName(null);
     setEncodedMessage(null); setDecoded(null); setHasWatermark(null);
+    setDerivedHash(null); setHashStatus(null);
     const reader = new FileReader();
     reader.onloadend = () => { setPreview(reader.result); setFile(f); };
     reader.readAsDataURL(f);
   }, []);
 
-  const messageBytes = new TextEncoder().encode(message).length;
-  const messageTooLong = messageBytes > 12;
+  // When the toggle is on and a file is loaded, fetch the C2PA manifest and
+  // derive a 12-char SHA-256 hex prefix to use as the watermark payload.
+  useEffect(() => {
+    if (!file || !useC2paHash) {
+      setDerivedHash(null);
+      setHashStatus(null);
+      return;
+    }
+    let cancelled = false;
+    setHashStatus('deriving');
+    (async () => {
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const resp = await axios.post(`${API_URL}/read-c2pa-upload`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 30000,
+        });
+        if (cancelled) return;
+        if (resp.data?.success && resp.data?.has_c2pa) {
+          const manifestText = JSON.stringify(resp.data.manifest);
+          const buf = new TextEncoder().encode(manifestText);
+          const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+          if (cancelled) return;
+          const hex = Array.from(new Uint8Array(hashBuf))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+          setDerivedHash(hex.slice(0, 12));
+          setHashStatus('ok');
+        } else {
+          setHashStatus('no-c2pa');
+          setDerivedHash(null);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setHashStatus('no-c2pa');
+        setDerivedHash(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [file, useC2paHash]);
+
+  // The actual payload sent to embed/decode. When the toggle is on and a hash
+  // was successfully derived, we use that; otherwise fall back to the typed
+  // message (handles unsigned input gracefully).
+  const effectiveMessage = (useC2paHash && derivedHash) ? derivedHash : message;
+  const effectiveBytes = new TextEncoder().encode(effectiveMessage).length;
+  const messageTooLong = effectiveBytes > 12;
 
   const handleEmbed = async () => {
     if (!file || busy || messageTooLong) return;
@@ -351,14 +451,14 @@ function WatermarkPanel() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('message', message);
+      formData.append('message', effectiveMessage);
       const resp = await axios.post(`${API_URL}/watermark-upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 180000,
       });
       setDownloadUrl(resp.data.download_url);
       setDownloadName(resp.data.filename);
-      setEncodedMessage(resp.data.encoded_message ?? message);
+      setEncodedMessage(resp.data.encoded_message ?? effectiveMessage);
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.message || err.message);
     } finally {
@@ -372,7 +472,7 @@ function WatermarkPanel() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (message) formData.append('expected_message', message);
+      if (effectiveMessage) formData.append('expected_message', effectiveMessage);
       const resp = await axios.post(`${API_URL}/decode-watermark-upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
@@ -414,21 +514,61 @@ function WatermarkPanel() {
       />
 
       <div className="wm-message-field">
+        <label className="wm-c2pa-toggle">
+          <input
+            type="checkbox"
+            checked={useC2paHash}
+            onChange={(e) => setUseC2paHash(e.target.checked)}
+            disabled={!!busy}
+          />
+          <span>Derive watermark from C2PA manifest (SHA-256, 12 hex chars)</span>
+        </label>
+
         <label htmlFor="wm-message-input" className="wm-message-label">
           Watermark message
           <span className={`wm-message-counter ${messageTooLong ? 'over' : ''}`}>
-            {messageBytes}/12 bytes
+            {effectiveBytes}/12 bytes
           </span>
         </label>
-        <input
-          id="wm-message-input"
-          type="text"
-          className="wm-message-input"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="e.g. your name"
-          disabled={!!busy}
-        />
+
+        {useC2paHash && hashStatus === 'ok' ? (
+          <input
+            id="wm-message-input"
+            type="text"
+            className="wm-message-input wm-message-input--derived"
+            value={derivedHash}
+            readOnly
+            disabled={!!busy}
+            title="Derived from the uploaded image's C2PA manifest"
+          />
+        ) : (
+          <input
+            id="wm-message-input"
+            type="text"
+            className="wm-message-input"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="e.g. your name"
+            disabled={!!busy}
+          />
+        )}
+
+        {useC2paHash && hashStatus === 'deriving' && (
+          <p className="wm-message-hint wm-message-hint--info">
+            Reading C2PA manifest from the file…
+          </p>
+        )}
+        {useC2paHash && hashStatus === 'no-c2pa' && (
+          <p className="wm-message-hint wm-message-hint--info">
+            This image has no C2PA manifest — using the typed message instead.
+          </p>
+        )}
+        {useC2paHash && hashStatus === 'ok' && (
+          <p className="wm-message-hint wm-message-hint--info">
+            Derived from SHA-256 of the verified C2PA manifest. Tampering with either
+            the manifest or the pixels will desynchronise the two.
+          </p>
+        )}
         {messageTooLong && (
           <p className="wm-message-hint">
             Too long — the watermark stores at most 12 UTF-8 bytes; anything beyond will be truncated.
@@ -520,10 +660,13 @@ function CombinedPanel() {
   const [error, setError] = useState(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [downloadName, setDownloadName] = useState(null);
+  const [author, setAuthor] = useState('');
+  const [title, setTitle] = useState('');
 
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null);
+    setAuthor(''); setTitle('');
   };
 
   const onFile = useCallback((f) => {
@@ -541,6 +684,8 @@ function CombinedPanel() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (author.trim()) formData.append('author', author.trim());
+      if (title.trim())  formData.append('title',  title.trim());
       const resp = await axios.post(`${API_URL}/sign-and-watermark-upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 240000,
@@ -575,6 +720,36 @@ function CombinedPanel() {
           onClear={reset}
           disabled={busy}
         />
+
+        <div className="manifest-input-grid">
+          <div className="manifest-input-field">
+            <label htmlFor="dcp-author" className="wm-message-label">Author <span className="manifest-input-hint">(optional)</span></label>
+            <input
+              id="dcp-author"
+              type="text"
+              className="wm-message-input"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder="e.g. Wei Song"
+              maxLength={120}
+              disabled={busy}
+            />
+          </div>
+          <div className="manifest-input-field">
+            <label htmlFor="dcp-title" className="wm-message-label">Title <span className="manifest-input-hint">(optional)</span></label>
+            <input
+              id="dcp-title"
+              type="text"
+              className="wm-message-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. UNSW campus photo"
+              maxLength={120}
+              disabled={busy}
+            />
+          </div>
+        </div>
+
         <div className="feature-actions">
           <button className="feature-btn primary" onClick={handleRun} disabled={!file || busy}>
             {busy ? (<><span className="btn-spinner"></span>Processing…</>) : 'Sign & watermark'}
@@ -1639,7 +1814,7 @@ function DemoSection() {
       <div className="section-container">
         <div className="section-header reveal">
           <span className="section-eyebrow">Live demo</span>
-          <h2 className="section-title">Try every capability in your browser.</h2>
+          <h2 className="section-title">Try every capability of Digital Content Protector.</h2>
           <p className="section-lede">
             Each tab is independent — sign an image, embed an invisible watermark,
             simulate an attacker tampering with the result, or run the whole pipeline at once.
