@@ -95,6 +95,33 @@ def sniff_image_mime(path):
         return 'image/webp'
     return None
 
+def check_signer_running(retries=8, sleep_s=1.0):
+    """`docker compose ps local-signer` from C2PA_DIR, retried a few times.
+
+    The one-shot version was prone to false negatives when the docker daemon
+    was momentarily busy — the subprocess could return empty stdout for a few
+    hundred ms even while the container was healthy. This wraps it in a short
+    retry loop. Returns the last subprocess.CompletedProcess on success, or
+    None if the container never appears.
+    """
+    import time
+    last_result = None
+    for _ in range(max(1, retries)):
+        try:
+            last_result = subprocess.run(
+                ['docker', 'compose', 'ps', 'local-signer'],
+                cwd=C2PA_DIR,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if last_result.stdout and 'local-signer' in last_result.stdout:
+                return last_result
+        except Exception:
+            pass
+        time.sleep(sleep_s)
+    return last_result if (last_result and 'local-signer' in (last_result.stdout or '')) else None
+
 def run_make_command(target, cwd=None):
     """Run a make command in the c2pa-python-example directory"""
     if cwd is None:
@@ -255,24 +282,21 @@ def upload_file():
         # Path relative to container working directory (assuming client_volume is mounted)
         container_input_path = f'client_volume/input-images/{filename}'
         
-        # Verify signer service is running and healthy
+        # Verify signer service is running and healthy. The retry wrapper
+        # tolerates a moment of docker-daemon flakiness; the actual HTTP-health
+        # wait below catches the case where the container exists but isn't
+        # serving yet.
         try:
-            check_signer = subprocess.run(
-                ['docker', 'compose', 'ps', 'local-signer'],
-                cwd=C2PA_DIR,
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
+            check_signer = check_signer_running()
+
             # Check if signer is running
-            if 'local-signer' not in check_signer.stdout:
+            if check_signer is None:
                 return jsonify({
                     'error': 'Signer service not found',
                     'details': 'The local-signer container does not exist. Please ensure Docker containers are started.',
                     'suggestion': 'Try running: cd c2pa-python-example && make run'
                 }), 500
-            
+
             # Check if signer is actually running (not exited)
             if 'Exited' in check_signer.stdout or 'Restarting' in check_signer.stdout:
                 return jsonify({
@@ -1201,23 +1225,19 @@ def sign_and_watermark_upload():
                     'details': f'Cannot write to {client_input_dir}. Please run: sudo chown -R $USER:$USER {C2PA_DIR}/client_volume'
                 }), 500
             
-            # Verify signer service and wait for it to be ready (same as /upload endpoint)
+            # Verify signer service and wait for it to be ready (same as /upload endpoint).
+            # check_signer_running() retries internally so a flaky docker daemon
+            # doesn't false-negative the existence check.
             try:
-                check_signer = subprocess.run(
-                    ['docker', 'compose', 'ps', 'local-signer'],
-                    cwd=C2PA_DIR,
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
-                
-                if 'local-signer' not in check_signer.stdout:
+                check_signer = check_signer_running()
+
+                if check_signer is None:
                     return jsonify({
                         'error': 'Signer service not found',
                         'details': 'The local-signer container does not exist. Please ensure Docker containers are started.',
                         'suggestion': 'Try running: cd c2pa-python-example && make run'
                     }), 500
-                
+
                 if 'Exited' in check_signer.stdout or 'Restarting' in check_signer.stdout:
                     return jsonify({
                         'error': 'Signer service is not running properly',
