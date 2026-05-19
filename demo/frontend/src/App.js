@@ -899,8 +899,7 @@ function CombinedPanel() {
             {wmAccuracy != null && (
               <div className="result-row">
                 <span>
-                  Watermark embedded with {useIdentityHash ? 'identity-derived hash' : 'message'} <strong>“{effectiveMessage}”</strong>
-                  {' — recoverable at '}<strong>{(wmAccuracy * 100).toFixed(1)}%</strong> bit accuracy.
+                  Watermark embedded with {useIdentityHash ? 'identity-derived hash' : 'message'} <strong>“{effectiveMessage}”</strong>.
                 </span>
               </div>
             )}
