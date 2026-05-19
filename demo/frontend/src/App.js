@@ -804,10 +804,22 @@ function manifestTamperTargets(manifest) {
   const activeId = manifest?.active_manifest;
   const active = activeId && manifest?.manifests ? manifest.manifests[activeId] : null;
   if (!active) return [];
+
+  // Prefer the CreativeWork assertion (where the user's typed Common name /
+  // Issuer live) over the cert-derived signature_info (which is the underlying
+  // Adobe test cert, "John Smith" / "C2PA Python Demo"). Falling back to the
+  // cert means we still offer something useful on files signed without the
+  // CreativeWork assertion.
   const sig = active.signature_info || {};
+  const creativeWork = (active.assertions || []).find(
+    a => a.label === 'stds.schema-org.CreativeWork'
+  )?.data;
+  const claimedCN  = creativeWork?.author?.[0]?.name;
+  const claimedIss = creativeWork?.publisher?.name;
+
   const candidates = [
-    { label: 'Common name', value: sig.common_name },
-    { label: 'Issuer', value: sig.issuer },
+    { label: 'Common name', value: claimedCN  || sig.common_name },
+    { label: 'Issuer',      value: claimedIss || sig.issuer },
     { label: 'Claim generator', value: active.claim_generator },
   ];
   return candidates.filter(c => typeof c.value === 'string' && c.value.length >= 2);
