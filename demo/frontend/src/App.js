@@ -9,7 +9,11 @@ import teamYuleiSui from './assets/team_yuleisui.jpg';
 import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
 import teamJinglingXue from './assets/team_jinglingxue.jpeg';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// Default to same-origin: in production (Flask serves both frontend and API),
+// the React app and the API live on the same host, so relative URLs are the
+// safest default. The CRA dev server on :3000 proxies unprefixed requests to
+// localhost:8000 via the "proxy" field in package.json, so dev mode still works.
+const API_URL = process.env.REACT_APP_API_URL ?? '';
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
