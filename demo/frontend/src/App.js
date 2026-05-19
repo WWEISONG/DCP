@@ -547,33 +547,34 @@ function WatermarkPanel() {
           <span>Derive watermark from C2PA manifest (SHA-256, 12 hex chars)</span>
         </label>
 
-        <label htmlFor="wm-message-input" className="wm-message-label">
-          Watermark message
-          <span className={`wm-message-counter ${messageTooLong ? 'over' : ''}`}>
-            {effectiveBytes}/12 bytes
-          </span>
-        </label>
+        {/* Three distinct UI states for the message field:
+            1) Toggle off → editable text input
+            2) Toggle on + no C2PA → no input, explicit warning + two ways out
+            3) Toggle on + C2PA → read-only derived hex hash */}
 
-        {useC2paHash && hashStatus === 'ok' ? (
-          <input
-            id="wm-message-input"
-            type="text"
-            className="wm-message-input wm-message-input--derived"
-            value={derivedHash}
-            readOnly
-            disabled={!!busy}
-            title="Derived from the uploaded image's C2PA manifest"
-          />
-        ) : (
-          <input
-            id="wm-message-input"
-            type="text"
-            className="wm-message-input"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="e.g. your name"
-            disabled={!!busy}
-          />
+        {!useC2paHash && (
+          <>
+            <label htmlFor="wm-message-input" className="wm-message-label">
+              Watermark message
+              <span className={`wm-message-counter ${messageTooLong ? 'over' : ''}`}>
+                {effectiveBytes}/12 bytes
+              </span>
+            </label>
+            <input
+              id="wm-message-input"
+              type="text"
+              className="wm-message-input"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="e.g. your name"
+              disabled={!!busy}
+            />
+            {messageTooLong && (
+              <p className="wm-message-hint">
+                Too long — the watermark stores at most 12 UTF-8 bytes; anything beyond will be truncated.
+              </p>
+            )}
+          </>
         )}
 
         {useC2paHash && hashStatus === 'deriving' && (
@@ -581,21 +582,35 @@ function WatermarkPanel() {
             Reading C2PA manifest from the file…
           </p>
         )}
+
         {useC2paHash && hashStatus === 'no-c2pa' && (
-          <p className="wm-message-hint wm-message-hint--info">
-            This image has no C2PA manifest — using the typed message instead.
-          </p>
+          <WarningBanner
+            title="This image isn't C2PA-signed — can't derive a watermark from it."
+            detail="Either uncheck the box above to type a watermark message manually, or sign the image first in the “C2PA” tab and come back."
+          />
         )}
+
         {useC2paHash && hashStatus === 'ok' && (
-          <p className="wm-message-hint wm-message-hint--info">
-            Derived from SHA-256 of the verified C2PA manifest. Tampering with either
-            the manifest or the pixels will desynchronise the two.
-          </p>
-        )}
-        {messageTooLong && (
-          <p className="wm-message-hint">
-            Too long — the watermark stores at most 12 UTF-8 bytes; anything beyond will be truncated.
-          </p>
+          <>
+            <label htmlFor="wm-message-input" className="wm-message-label">
+              Derived watermark
+              <span className={`wm-message-counter ${messageTooLong ? 'over' : ''}`}>
+                {effectiveBytes}/12 bytes
+              </span>
+            </label>
+            <input
+              id="wm-message-input"
+              type="text"
+              className="wm-message-input wm-message-input--derived"
+              value={derivedHash}
+              readOnly
+              disabled={!!busy}
+              title="Derived from the uploaded image's C2PA manifest"
+            />
+            <p className="wm-message-hint wm-message-hint--info">
+              SHA-256 prefix of the verified C2PA manifest. Tampering with either the manifest or the pixels will desynchronise the two.
+            </p>
+          </>
         )}
       </div>
 
@@ -603,14 +618,14 @@ function WatermarkPanel() {
         <button
           className="feature-btn primary"
           onClick={handleEmbed}
-          disabled={!file || !!busy || messageTooLong}
+          disabled={!file || !!busy || messageTooLong || (useC2paHash && hashStatus !== 'ok')}
         >
           {busy === 'embed' ? (<><span className="btn-spinner"></span>Embedding…</>) : 'Embed watermark'}
         </button>
         <button
           className="feature-btn secondary"
           onClick={handleDecode}
-          disabled={!file || !!busy}
+          disabled={!file || !!busy || (useC2paHash && hashStatus !== 'ok')}
         >
           {busy === 'decode' ? (<><span className="btn-spinner"></span>Decoding…</>) : 'Decode watermark'}
         </button>
