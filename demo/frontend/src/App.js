@@ -665,21 +665,12 @@ function WatermarkPanel() {
 }
 
 function DecodedWatermarkView({ decoded }) {
-  const accBadgeClass = decoded.accuracy != null
-    ? (decoded.accuracy >= 0.95 ? 'badge-ok' : 'badge-warn')
-    : '';
   return (
     <div className="watermark-bits-view">
       <div className="manifest-row">
         <span>Decoded message</span>
         <strong className="wm-decoded-message">“{decoded.message || '<empty>'}”</strong>
       </div>
-      {decoded.accuracy != null && (
-        <div className="manifest-row">
-          <span>Bit accuracy vs expected</span>
-          <strong className={accBadgeClass}>{(decoded.accuracy * 100).toFixed(1)}%</strong>
-        </div>
-      )}
       <div className="manifest-row">
         <span>Total bits</span><strong>{decoded.bits.length}</strong>
       </div>
