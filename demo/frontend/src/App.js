@@ -346,13 +346,12 @@ function C2paManifestView({ manifest }) {
   const claimedCommonName = creativeWork?.author?.[0]?.name || null;
   const claimedIssuer     = creativeWork?.publisher?.name  || null;
 
-  // The Validation badge is green when nothing failed, red when integrity is
-  // broken, and amber when only trust is missing (still a meaningful signal
-  // for the demo, but not "tampered").
+  // The Validation badge reflects the signature's integrity. Trust failures
+  // (untrusted CA — expected for a demo cert) don't downgrade it; only an
+  // actual signature/asset-hash mismatch makes it "Invalid".
   let badgeClass = 'badge-ok';
-  let badgeText  = validationState;
-  if (isTampered) { badgeClass = 'badge-bad';  badgeText = 'Invalid'; }
-  else if (isUntrusted) { badgeClass = 'badge-warn'; badgeText = 'Untrusted (demo cert)'; }
+  let badgeText  = 'Valid';
+  if (isTampered) { badgeClass = 'badge-bad'; badgeText = 'Invalid'; }
 
   return (
     <div className="c2pa-manifest-view">
