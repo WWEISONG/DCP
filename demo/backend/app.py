@@ -902,6 +902,25 @@ def watermark_upload():
                 else:
                     watermarked_path = wm_result
                     encoded_message = user_message or ''
+
+                # VINE always saves as PNG. If the user uploaded a JPEG, the file
+                # size balloons (JPEG-compressed input becomes uncompressed PNG).
+                # Re-encode back to JPEG when the original was JPEG. quality=100
+                # + subsampling=0 keeps the watermark recoverable.
+                src_mime = sniff_image_mime(temp_path)
+                if src_mime == 'image/jpeg' and watermarked_path.lower().endswith('.png'):
+                    try:
+                        from PIL import Image as _PIL
+                        jpeg_path = os.path.splitext(watermarked_path)[0] + '.jpg'
+                        with _PIL.open(watermarked_path) as _im:
+                            if _im.mode != 'RGB':
+                                _im = _im.convert('RGB')
+                            _im.save(jpeg_path, 'JPEG', quality=100, subsampling=0)
+                        try: os.remove(watermarked_path)
+                        except Exception: pass
+                        watermarked_path = jpeg_path
+                    except Exception as _re:
+                        print(f"Warning: could not re-encode watermarked file to JPEG: {_re}")
                 
                 # Step 3: If original had C2PA manifest, re-sign the watermarked image with it
                 if original_c2pa_manifest is not None:

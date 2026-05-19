@@ -2008,7 +2008,7 @@ function TeamSection() {
     },
     {
       name: 'Yulei Sui',
-      role: 'Scientia Associate Professor · UNSW',
+      role: 'Professor · UNSW',
       photo: teamYuleiSui,
       bio: 'ARC Future Fellow and Fellow of Engineers Australia. Builds open-source frameworks for static program analysis and verification, and studies the intersection of programming languages and code LLMs.',
       url: 'https://yuleisui.github.io/',
