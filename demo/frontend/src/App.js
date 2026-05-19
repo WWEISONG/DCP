@@ -685,36 +685,45 @@ function CombinedPanel() {
   const [downloadName, setDownloadName] = useState(null);
   const [commonName, setCommonName] = useState('');
   const [issuer, setIssuer] = useState('');
+  const [wmMessage, setWmMessage] = useState('UNSW CSE');
+  const [wmAccuracy, setWmAccuracy] = useState(null);
 
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null);
-    setCommonName(''); setIssuer('');
+    setCommonName(''); setIssuer(''); setWmMessage('UNSW CSE'); setWmAccuracy(null);
   };
 
   const onFile = useCallback((f) => {
     const err = validateFile(f);
     if (err) { setError(err); return; }
-    setError(null); setDownloadUrl(null); setDownloadName(null);
+    setError(null); setDownloadUrl(null); setDownloadName(null); setWmAccuracy(null);
     const reader = new FileReader();
     reader.onloadend = () => { setPreview(reader.result); setFile(f); };
     reader.readAsDataURL(f);
   }, []);
 
+  const wmBytes = new TextEncoder().encode(wmMessage).length;
+  const wmTooLong = wmBytes > 12;
+
   const handleRun = async () => {
-    if (!file || busy) return;
-    setBusy(true); setError(null);
+    if (!file || busy || wmTooLong) return;
+    setBusy(true); setError(null); setWmAccuracy(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
       if (commonName.trim()) formData.append('common_name', commonName.trim());
       if (issuer.trim())     formData.append('issuer',      issuer.trim());
+      if (wmMessage)         formData.append('message',     wmMessage);
       const resp = await axios.post(`${API_URL}/sign-and-watermark-upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 240000,
       });
       setDownloadUrl(resp.data.download_url);
       setDownloadName(resp.data.filename);
+      if (typeof resp.data.watermark_accuracy === 'number') {
+        setWmAccuracy(resp.data.watermark_accuracy);
+      }
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.message || err.message);
     } finally {
@@ -773,8 +782,31 @@ function CombinedPanel() {
           </div>
         </div>
 
+        <div className="wm-message-field">
+          <label htmlFor="dcp-wm-message" className="wm-message-label">
+            Watermark message
+            <span className={`wm-message-counter ${wmTooLong ? 'over' : ''}`}>
+              {wmBytes}/12 bytes
+            </span>
+          </label>
+          <input
+            id="dcp-wm-message"
+            type="text"
+            className="wm-message-input"
+            value={wmMessage}
+            onChange={(e) => setWmMessage(e.target.value)}
+            placeholder="e.g. UNSW CSE"
+            disabled={busy}
+          />
+          {wmTooLong && (
+            <p className="wm-message-hint">
+              Too long — the watermark stores at most 12 UTF-8 bytes; anything beyond will be truncated.
+            </p>
+          )}
+        </div>
+
         <div className="feature-actions">
-          <button className="feature-btn primary" onClick={handleRun} disabled={!file || busy}>
+          <button className="feature-btn primary" onClick={handleRun} disabled={!file || busy || wmTooLong}>
             {busy ? (<><span className="btn-spinner"></span>Processing…</>) : 'Sign & watermark'}
           </button>
         </div>
@@ -786,6 +818,14 @@ function CombinedPanel() {
             <div className="result-row">
               <span>✅ Signed &amp; watermarked file ready: <code>{downloadName}</code></span>
             </div>
+            {wmAccuracy != null && (
+              <div className="result-row">
+                <span>
+                  Watermark embedded with message <strong>“{wmMessage}”</strong>
+                  {' — recoverable at '}<strong>{(wmAccuracy * 100).toFixed(1)}%</strong> bit accuracy.
+                </span>
+              </div>
+            )}
             <button className="feature-btn download" onClick={handleDownload}>
               Download
             </button>
