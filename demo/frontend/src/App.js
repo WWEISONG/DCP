@@ -125,15 +125,12 @@ function C2paPanel() {
   const [hasC2pa, setHasC2pa] = useState(null);
   const [commonName, setCommonName] = useState('');
   const [issuer, setIssuer] = useState('');
-  // The issuer doesn't come back through c2pa-python's signature_info JSON,
-  // so for fresh signs we remember what the user typed and surface it.
-  const [issuerFromSign, setIssuerFromSign] = useState(null);
 
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null);
     setManifest(null); setHasC2pa(null);
-    setCommonName(''); setIssuer(''); setIssuerFromSign(null);
+    setCommonName(''); setIssuer('');
   };
 
   const onFile = useCallback((f) => {
@@ -149,7 +146,6 @@ function C2paPanel() {
   const handleSign = async () => {
     if (!file || busy) return;
     setBusy('sign'); setError(null); setManifest(null); setHasC2pa(null);
-    setIssuerFromSign(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -161,8 +157,6 @@ function C2paPanel() {
       });
       setDownloadUrl(resp.data.download_url);
       setDownloadName(resp.data.filename);
-      // Remember the issuer we just used; the verify pass doesn't surface it.
-      if (resp.data.issuer) setIssuerFromSign(resp.data.issuer);
 
       try {
         const signedResp = await axios.get(`${API_URL}${resp.data.download_url}`, {
@@ -304,49 +298,78 @@ function C2paPanel() {
       {hasC2pa === true && manifest && (
         <div className="feature-result">
           <h3 className="result-title">C2PA manifest</h3>
-          <C2paManifestView manifest={manifest} issuerFallback={issuerFromSign} />
+          <C2paManifestView manifest={manifest} />
         </div>
       )}
     </section>
   );
 }
 
-function C2paManifestView({ manifest, issuerFallback }) {
+function C2paManifestView({ manifest }) {
   const activeId = manifest.active_manifest;
   const active = activeId && manifest.manifests ? manifest.manifests[activeId] : null;
   const sig = active?.signature_info || {};
   const validationState = manifest.validation_state || 'unknown';
-  const isInvalid = validationState && validationState !== 'Valid';
 
-  // Pull a concise list of failure explanations so we can show them with the warning.
+  // Pull failures so we can decide what kind of warning to show.
   const failures = manifest?.validation_results?.activeManifest?.failure || [];
-  const failureSummary = failures
+
+  // "Integrity failures" mean the file has actually been tampered with — these
+  // get the loud red banner. "Trust failures" (untrusted root, untrusted TSA)
+  // mean the cert chain isn't anchored to a real CA — we surface those
+  // separately as informational, because they're expected for a demo signer
+  // and don't mean someone tampered with the asset.
+  const INTEGRITY_CODES = new Set([
+    'claimSignature.mismatch',
+    'assertion.hashedURI.mismatch',
+    'assertion.dataHash.mismatch',
+    'assertion.hashedURI.notFound',
+    'claimSignature.missing',
+    'claim.missing',
+  ]);
+  const integrityFailures = failures.filter(f => INTEGRITY_CODES.has(f.code));
+  const trustFailures     = failures.filter(f => !INTEGRITY_CODES.has(f.code));
+  const isTampered = integrityFailures.length > 0;
+  const isUntrusted = trustFailures.length > 0;
+
+  const tamperDetail = integrityFailures
     .map(f => f.explanation || f.code)
     .filter(Boolean)
     .slice(0, 3)
     .join('; ');
 
-  // c2pa-python's signature_info only includes common_name reliably; issuer
-  // isn't always surfaced for self-rooted chains. Use the fallback the caller
-  // provides (typically the value the user typed at sign time).
-  const issuerDisplay = sig.issuer || issuerFallback || '—';
+  // Common name + Issuer come from the CreativeWork assertion we injected at
+  // sign time (the cert subject itself is Adobe's test cert and not shown).
+  const creativeWork = (active?.assertions || []).find(
+    a => a.label === 'stds.schema-org.CreativeWork'
+  )?.data;
+  const claimedCommonName = creativeWork?.author?.[0]?.name || null;
+  const claimedIssuer     = creativeWork?.publisher?.name  || null;
+
+  // The Validation badge is green when nothing failed, red when integrity is
+  // broken, and amber when only trust is missing (still a meaningful signal
+  // for the demo, but not "tampered").
+  let badgeClass = 'badge-ok';
+  let badgeText  = validationState;
+  if (isTampered) { badgeClass = 'badge-bad';  badgeText = 'Invalid'; }
+  else if (isUntrusted) { badgeClass = 'badge-warn'; badgeText = 'Untrusted (demo cert)'; }
 
   return (
     <div className="c2pa-manifest-view">
-      {isInvalid && (
+      {isTampered && (
         <WarningBanner
           title="The signature is modified and invalid!"
-          detail={failureSummary || `Validation state: ${validationState}`}
+          detail={tamperDetail || `Validation state: ${validationState}`}
         />
       )}
       <div className="manifest-info">
-        <div className="manifest-row"><span>Common name</span><strong>{sig.common_name || '—'}</strong></div>
-        <div className="manifest-row"><span>Issuer</span><strong>{issuerDisplay}</strong></div>
+        <div className="manifest-row"><span>Common name</span><strong>{claimedCommonName || '—'}</strong></div>
+        <div className="manifest-row"><span>Issuer</span><strong>{claimedIssuer || '—'}</strong></div>
         <div className="manifest-row"><span>Signed at</span><strong>{sig.time ? new Date(sig.time).toLocaleString() : '—'}</strong></div>
         <div className="manifest-row"><span>Claim generator</span><strong>{active?.claim_generator || '—'}</strong></div>
         <div className="manifest-row">
           <span>Validation</span>
-          <strong className={isInvalid ? 'badge-bad' : 'badge-ok'}>{validationState}</strong>
+          <strong className={badgeClass}>{badgeText}</strong>
         </div>
         {active?.assertions && active.assertions.length > 0 && (
           <div className="manifest-row">

@@ -95,181 +95,6 @@ def sniff_image_mime(path):
         return 'image/webp'
     return None
 
-def _generate_signing_cert(common_name: str, issuer: str):
-    """Generate a 2-cert chain (root CA + leaf) for ES256 signing where:
-      - Root CA cert: Subject CN = `issuer`, self-signed, CA=True.
-      - Leaf cert:    Subject CN = `common_name`, Issuer DN = root CA Subject,
-                      signed by the root CA's private key, has EKU=emailProtection
-                      (C2PA-recognized).
-
-    Returns (chain_pem, leaf_key_pem). The chain is leaf-first, root second
-    (the order c2pa-rs expects). Sign with the leaf's private key.
-
-    Validators will mark the cert chain as untrusted because the root CA isn't
-    in any trust store — that's expected for a research demo. The metadata
-    fields (Common name, Issuer) will reflect the user's input correctly.
-    """
-    from cryptography import x509
-    from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
-    from cryptography.hazmat.primitives.asymmetric import ec, rsa
-    from cryptography.hazmat.primitives import hashes, serialization
-    import datetime, uuid
-
-    not_before = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=5)
-    not_after = not_before + datetime.timedelta(days=365)
-
-    # Use RSA-2048 root + RSA-2048 leaf, signing alg PS256. ECDSA-leaf signing
-    # produced "claimSignature.mismatch" in earlier testing despite valid bytes
-    # — Adobe's working example chain uses RSA throughout.
-
-    # --- Root CA (RSA-2048, self-signed) ---
-    root_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    root_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, issuer)])
-    root_cert = (
-        x509.CertificateBuilder()
-        .subject_name(root_name)
-        .issuer_name(root_name)
-        .public_key(root_key.public_key())
-        .serial_number(int(uuid.uuid4()))
-        .not_valid_before(not_before)
-        .not_valid_after(not_after)
-        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
-        .add_extension(
-            x509.SubjectKeyIdentifier.from_public_key(root_key.public_key()),
-            critical=False,
-        )
-        .add_extension(
-            x509.AuthorityKeyIdentifier.from_issuer_public_key(root_key.public_key()),
-            critical=False,
-        )
-        .sign(root_key, hashes.SHA256())
-    )
-
-    # --- Leaf (RSA-2048, signed by RSA root) ---
-    leaf_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    leaf_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)])
-    leaf_cert = (
-        x509.CertificateBuilder()
-        .subject_name(leaf_name)
-        .issuer_name(root_name)
-        .public_key(leaf_key.public_key())
-        .serial_number(int(uuid.uuid4()))
-        .not_valid_before(not_before)
-        .not_valid_after(not_after)
-        .add_extension(x509.KeyUsage(
-            digital_signature=True, content_commitment=False,
-            key_encipherment=False, data_encipherment=False,
-            key_agreement=False, key_cert_sign=False, crl_sign=False,
-            encipher_only=False, decipher_only=False,
-        ), critical=True)
-        .add_extension(
-            x509.ExtendedKeyUsage([ExtendedKeyUsageOID.EMAIL_PROTECTION]),
-            critical=False,
-        )
-        .add_extension(
-            x509.SubjectKeyIdentifier.from_public_key(leaf_key.public_key()),
-            critical=False,
-        )
-        .add_extension(
-            x509.AuthorityKeyIdentifier.from_issuer_public_key(root_key.public_key()),
-            critical=False,
-        )
-        .sign(root_key, hashes.SHA256())  # signed by root RSA private key
-    )
-
-    leaf_pem = leaf_cert.public_bytes(serialization.Encoding.PEM).decode('utf-8')
-    root_pem = root_cert.public_bytes(serialization.Encoding.PEM).decode('utf-8')
-    # c2pa-rs wants the chain leaf-first. Include root so the chain anchors;
-    # leaf alone gave 'claimSignature.mismatch' in earlier testing.
-    chain_pem = leaf_pem + root_pem
-
-    # PKCS#8 (BEGIN PRIVATE KEY) is what c2pa-rs explicitly requires.
-    leaf_key_pem = leaf_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode('utf-8')
-    return chain_pem, leaf_key_pem
-
-
-def _sign_image_inproc(input_path: str, output_path: str, common_name: str, issuer: str):
-    """Sign `input_path` with a freshly generated ES256 cert and write to
-    `output_path`. C2PA only supports JPEG, so PNG inputs are converted on the
-    way through. Returns the actual output path written (may differ from the
-    requested one if extension changed)."""
-    import json
-    from c2pa import Builder, Signer, C2paSigningAlg, C2paSignerInfo
-    from PIL import Image
-
-    cert_pem, key_pem = _generate_signing_cert(common_name, issuer)
-
-    # Ensure output is .jpg regardless of input extension (C2PA requirement).
-    name, ext = os.path.splitext(output_path)
-    if ext.lower() not in ('.jpg', '.jpeg'):
-        output_path = name + '.jpg'
-
-    # If input isn't JPEG, convert to a temp JPEG first.
-    needs_conversion = sniff_image_mime(input_path) != 'image/jpeg'
-    source_path = input_path
-    temp_jpeg = None
-    if needs_conversion:
-        temp_jpeg = output_path + '.in.jpg'
-        with Image.open(input_path) as img:
-            if img.mode in ('RGBA', 'LA', 'P'):
-                rgb = Image.new('RGB', img.size, (255, 255, 255))
-                if img.mode == 'P':
-                    img = img.convert('RGBA')
-                rgb.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
-                img = rgb
-            elif img.mode != 'RGB':
-                img = img.convert('RGB')
-            img.save(temp_jpeg, 'JPEG', quality=95)
-        source_path = temp_jpeg
-
-    manifest = json.dumps({
-        "claim_generator_info": [
-            {"name": "Digital Content Protector", "version": "0.1.0"}
-        ],
-        "assertions": [
-            {
-                "label": "c2pa.actions",
-                "data": {
-                    "actions": [{
-                        "action": "c2pa.created",
-                        "softwareAgent": {
-                            "name": "Digital Content Protector",
-                            "version": "0.1.0",
-                        },
-                        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCreation",
-                    }]
-                }
-            }
-        ]
-    })
-
-    # C2paSignerInfo expects bytes for sign_cert and private_key (FFI layer).
-    # ta_url must be a real timestamp authority — DigiCert's is the standard.
-    # Use Ps256 (RSA-PSS-SHA256) to match the cert key type.
-    signer_info = C2paSignerInfo(
-        C2paSigningAlg.PS256,
-        cert_pem.encode('utf-8'),
-        key_pem.encode('utf-8'),
-        'http://timestamp.digicert.com',
-    )
-    signer = Signer.from_info(signer_info)
-
-    try:
-        with Builder(manifest) as builder:
-            with open(source_path, 'rb') as src, open(output_path, 'wb') as dst:
-                builder.sign(signer, 'image/jpeg', src, dst)
-    finally:
-        if temp_jpeg and os.path.exists(temp_jpeg):
-            try: os.remove(temp_jpeg)
-            except Exception: pass
-
-    return output_path
-
-
 def check_signer_running(retries=8, sleep_s=1.0):
     """`docker compose ps local-signer` from C2PA_DIR, retried a few times.
 
@@ -421,43 +246,372 @@ def upload_file():
         filename = secure_filename(file.filename)
         upload_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(upload_path)
-
-        # Read optional Common name / Issuer from the form. These end up as
-        # the X.509 cert subject and issuer Common Name fields, so they appear
-        # verbatim in the verified manifest.
-        cn  = (request.form.get('common_name') or '').strip() or 'DCP signer'
-        iss = (request.form.get('issuer') or '').strip() or 'DCP Demo CA'
-
+        
         # Create output directory for this file
-        file_id = filename.rsplit('.', 1)[0]
-        output_dir = os.path.join(OUTPUT_FOLDER, file_id)
+        output_dir = os.path.join(OUTPUT_FOLDER, filename.rsplit('.', 1)[0])
         os.makedirs(output_dir, exist_ok=True)
-
-        # Sign in-process — no Docker / local-signer / LocalStack required.
-        signed_basename = f"{file_id}-signed.jpg"
-        signed_path = os.path.join(output_dir, signed_basename)
+        
+        # Copy file to a location accessible by docker
+        # Based on the Makefile, files should be in client_volume or tests directory
+        # We'll use client_volume/input-images for uploaded files
+        client_input_dir = os.path.join(C2PA_DIR, 'client_volume', 'input-images')
         try:
-            actual_signed = _sign_image_inproc(upload_path, signed_path, cn, iss)
-        except Exception as sign_err:
-            import traceback; traceback.print_exc()
+            os.makedirs(client_input_dir, exist_ok=True, mode=0o755)
+        except PermissionError as e:
             return jsonify({
-                'error': 'In-process C2PA signing failed',
-                'details': str(sign_err)
+                'error': 'Permission denied when creating input directory',
+                'details': f'Cannot create {client_input_dir}. Please run: sudo chown -R $USER:$USER {C2PA_DIR}/client_volume'
             }), 500
+        
+        client_input_path = os.path.join(client_input_dir, filename)
+        try:
+            shutil.copy2(upload_path, client_input_path)
+        except PermissionError as e:
+            return jsonify({
+                'error': 'Permission denied when copying file',
+                'details': f'Cannot write to {client_input_dir}. Please run: sudo chown -R $USER:$USER {C2PA_DIR}/client_volume'
+            }), 500
+        
+        # The client command format from Makefile:
+        # docker compose run --entrypoint "python tests/client.py ./tests/A.jpg -o client_volume/signed-images" client
+        # We need to use paths relative to the container's working directory
+        # The file path inside container should be relative to the mounted volume
+        client_output_dir = 'client_volume/signed-images'
+        os.makedirs(os.path.join(C2PA_DIR, client_output_dir), exist_ok=True)
+        
+        # Path relative to container working directory (assuming client_volume is mounted)
+        container_input_path = f'client_volume/input-images/{filename}'
+        
+        # Verify signer service is running and healthy. The retry wrapper
+        # tolerates a moment of docker-daemon flakiness; the actual HTTP-health
+        # wait below catches the case where the container exists but isn't
+        # serving yet.
+        try:
+            check_signer = check_signer_running()
 
-        signed_filename = os.path.basename(actual_signed)
+            # Check if signer is running
+            if check_signer is None:
+                return jsonify({
+                    'error': 'Signer service not found',
+                    'details': 'The local-signer container does not exist. Please ensure Docker containers are started.',
+                    'suggestion': 'Try running: cd c2pa-python-example && make run'
+                }), 500
+
+            # Check if signer is actually running (not exited)
+            if 'Exited' in check_signer.stdout or 'Restarting' in check_signer.stdout:
+                return jsonify({
+                    'error': 'Signer service is not running properly',
+                    'details': check_signer.stdout,
+                    'suggestion': 'Check signer logs: sudo docker compose logs local-signer'
+                }), 500
+            
+            # Note: We don't check localhost:5000 accessibility here because:
+            # 1. The client container connects to signer via Docker network (http://signer:5000)
+            # 2. The signer might be running but not exposed to host (which is fine)
+            # 3. The docker compose run command will handle network connectivity
+            print(f"Signer container status: {check_signer.stdout}")
+            
+            # Just verify the container exists and is not in a bad state
+            if 'local-signer' in check_signer.stdout and ('Up' in check_signer.stdout or 'running' in check_signer.stdout.lower()):
+                print("Signer container appears to be running - proceeding with signing")
+            else:
+                # Get recent logs to help debug
+                try:
+                    logs_cmd = subprocess.run(
+                        ['docker', 'compose', 'logs', '--tail', '30', 'local-signer'],
+                        cwd=C2PA_DIR,
+                        capture_output=True,
+                        text=True,
+                        timeout=10
+                    )
+                    recent_logs = logs_cmd.stdout[-1000:] if logs_cmd.stdout else 'No logs available'
+                except:
+                    recent_logs = 'Could not retrieve logs'
+                
+                return jsonify({
+                    'error': 'Signer service may not be ready',
+                    'details': f'Container status: {check_signer.stdout}',
+                    'logs': recent_logs,
+                    'suggestion': 'Check signer status: sudo docker compose ps local-signer\nCheck signer logs: sudo docker compose logs local-signer'
+                }), 500
+                
+        except FileNotFoundError:
+            # curl might not be installed, skip health check
+            pass
+        except Exception as e:
+            print(f"Warning: Could not verify signer status: {e}")
+        
+        # Check if .env file exists and has required keys
+        env_file_path = os.path.join(C2PA_DIR, 'local_volume', '.env')
+        if os.path.exists(env_file_path):
+            # Fix permissions if needed
+            try:
+                os.chmod(env_file_path, 0o644)
+            except Exception:
+                pass  # Ignore permission errors on chmod
+            
+            # Try to read the file
+            try:
+                with open(env_file_path, 'r') as f:
+                    env_content = f.read()
+            except PermissionError:
+                # Try with sudo if permission denied
+                try:
+                    result = subprocess.run(
+                        ['cat', env_file_path],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        env_content = result.stdout
+                    else:
+                        print(f"Warning: Could not read .env file: {result.stderr}")
+                        env_content = ""
+                except Exception as e:
+                    print(f"Warning: Could not read .env file: {e}")
+                    env_content = ""
+            
+            if env_content and ('KMS_KEY_ID' not in env_content or 'AWS_SECRET_ACCESS_KEY' not in env_content):
+                    print("WARNING: .env file exists but is missing required keys (KMS_KEY_ID or AWS_SECRET_ACCESS_KEY)")
+                    print("The local-setup container may need to be re-run.")
+                    print("You can fix this by running: cd c2pa-python-example && sudo docker compose run --rm local-setup")
+        else:
+            print(f"WARNING: .env file not found at {env_file_path}")
+            print("The local-setup container should create this file. Check if it completed successfully.")
+        
+        # Ensure the Docker network exists
+        # The network name should be c2pa-python-example_default based on docker-compose.yaml
+        network_name = 'c2pa-python-example_default'
+        check_network = subprocess.run(
+            ['docker', 'network', 'inspect', network_name],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if check_network.returncode != 0:
+            print(f"Warning: Network {network_name} might not exist. Creating it...")
+            # Network will be created automatically by docker compose
+        
+        # Create a temporary .env file for the client with the correct endpoint
+        # The issue is that the .env file has CLIENT_ENDPOINT=signer, but DNS can't resolve it
+        # We'll create a temp .env file with local-signer (container name) instead
+        import tempfile
+        temp_env_file = os.path.join(C2PA_DIR, 'client_volume', '.env.client')
+        
+        # Read the original .env file
+        original_env_path = os.path.join(C2PA_DIR, 'local_volume', '.env')
+        temp_env_content = []
+        
+        if os.path.exists(original_env_path):
+            with open(original_env_path, 'r') as f:
+                for line in f:
+                    # Replace CLIENT_ENDPOINT=signer with CLIENT_ENDPOINT=local-signer
+                    if line.startswith('CLIENT_ENDPOINT='):
+                        # Use the service name 'local-signer' from docker-compose.yaml
+                        # Docker Compose automatically creates DNS entries for service names
+                        temp_env_content.append('CLIENT_ENDPOINT=local-signer\n')
+                    else:
+                        temp_env_content.append(line)
+        
+        # Write the temporary .env file
+        with open(temp_env_file, 'w') as f:
+            f.writelines(temp_env_content)
+        
+        # Check signer logs to see if it's starting properly
+        # The signer might be waiting for .env file or still initializing
+        try:
+            logs_cmd = subprocess.run(
+                ['docker', 'compose', 'logs', '--tail', '30', 'local-signer'],
+                cwd=C2PA_DIR,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            signer_logs = logs_cmd.stdout if logs_cmd.stdout else 'No logs available'
+            print(f"Recent signer logs:\n{signer_logs[-500:]}")
+        except Exception as e:
+            print(f"Could not get signer logs: {e}")
+            signer_logs = 'Could not retrieve logs'
+        
+        # Wait for signer to be fully ready (it might be waiting for .env file)
+        # The wait-for-env.sh script can take up to 120 seconds
+        import time
+        import urllib.request
+        print("Waiting for signer service to be ready...")
+        max_wait = 120  # Increased to 120s to account for wait-for-env.sh
+        waited = 0
+        signer_ready = False
+        while waited < max_wait:
+            try:
+                # Check if signer is responding
+                response = urllib.request.urlopen('http://localhost:5050/health', timeout=2)
+                if response.getcode() == 200:
+                    print("Signer service is ready!")
+                    signer_ready = True
+                    break
+            except Exception as e:
+                if waited % 20 == 0:  # Print status every 20 seconds
+                    print(f"Signer not ready yet... ({waited}s/{max_wait}s) - {str(e)[:50]}")
+            time.sleep(2)
+            waited += 2
+        
+        if not signer_ready:
+            # Get latest signer logs
+            try:
+                logs_cmd = subprocess.run(
+                    ['docker', 'compose', 'logs', '--tail', '50', 'local-signer'],
+                    cwd=C2PA_DIR,
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                latest_logs = logs_cmd.stdout[-1500:] if logs_cmd.stdout else 'No logs available'
+            except:
+                latest_logs = 'Could not retrieve logs'
+            
+            return jsonify({
+                'error': 'Signer service is not ready',
+                'details': f'Signer did not become ready after {max_wait} seconds. The signer might still be waiting for configuration or the app might have crashed.',
+                'logs': latest_logs,
+                'suggestion': 'Check signer logs: sudo docker compose logs local-signer\nCheck if .env file exists: ls -la c2pa-python-example/local_volume/.env'
+            }), 500
+        
+        # Build the docker compose command
+        # Use the temporary .env file instead of the default one
+        # Ensure the container joins the same network by using the network name explicitly
+        # The network name is c2pa-python-example_default
+        # User-supplied Common name + Issuer go into a CreativeWork assertion
+        # via client.py --common-name / --issuer flags. The cert subject itself
+        # stays Adobe's test cert (we don't display the cert-derived
+        # common_name); the frontend reads the assertion to populate the
+        # "Common name" / "Issuer" rows.
+        entrypoint = f'python tests/client.py {container_input_path} -o {client_output_dir}'
+        _cn  = (request.form.get('common_name') or '').strip()
+        _iss = (request.form.get('issuer') or '').strip()
+        if _cn:
+            entrypoint += f' --common-name {shlex.quote(_cn)}'
+        if _iss:
+            entrypoint += f' --issuer {shlex.quote(_iss)}'
+
+        docker_cmd = [
+            'docker', 'compose',
+            'run',
+            '--rm',  # Remove container after running
+            '-e', f'CLIENT_ENV_FILE_PATH=client_volume/.env.client',  # Use our temp .env file
+            '--entrypoint', entrypoint,
+            'client'
+        ]
+
+        print(f"Running docker command: {' '.join(docker_cmd)}")
+        print(f"Input file: {client_input_path} (exists: {os.path.exists(client_input_path)})")
+        print(f"Output dir: {os.path.join(C2PA_DIR, client_output_dir)}")
+        
+        try:
+            result = subprocess.run(
+                docker_cmd,
+                cwd=C2PA_DIR,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
+            )
+            
+            print(f"Docker command stdout:\n{result.stdout}")
+            if result.stderr:
+                print(f"Docker command stderr:\n{result.stderr}")
+            print(f"Docker command return code: {result.returncode}")
+            
+            if result.returncode != 0:
+                # Try to extract meaningful error message
+                error_msg = result.stderr if result.stderr else result.stdout
+                
+                # Check for common errors
+                if 'Connection refused' in error_msg or 'Failed to get signer data' in error_msg:
+                    error_msg += "\n\nHint: The signer service might not be running or accessible. Check: sudo docker compose ps local-signer"
+                elif 'No such file or directory' in error_msg:
+                    error_msg += f"\n\nHint: File path issue. Input file should be at: {client_input_path}"
+                
+                return jsonify({
+                    'error': 'Failed to sign file',
+                    'details': error_msg,
+                    'stdout': result.stdout[:500] if result.stdout else '',  # Limit output size
+                    'returncode': result.returncode
+                }), 500
+        except subprocess.TimeoutExpired:
+            return jsonify({
+                'error': 'Signing process timed out after 5 minutes',
+                'details': 'The signing operation took too long. The file might be too large or the signer service might be unresponsive.'
+            }), 500
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Exception in upload_file: {error_trace}")
+            return jsonify({
+                'error': 'Exception while running signing command',
+                'details': str(e),
+                'trace': error_trace
+            }), 500
+        finally:
+            # Clean up temporary .env file
+            try:
+                if os.path.exists(temp_env_file):
+                    os.remove(temp_env_file)
+            except:
+                pass
+        
+        # Find the signed file
+        # The output directory path on host
+        host_output_dir = os.path.join(C2PA_DIR, client_output_dir)
+        # Expected signed filename format: originalname-signed.ext
+        # Note: PNG files are converted to JPEG, so they'll have .jpg extension
+        name_parts = os.path.splitext(filename)
+        original_ext = name_parts[1].lower()
+        
+        # If original is PNG, the signed file will be .jpg (converted for C2PA)
+        if original_ext == '.png':
+            expected_signed_filename = f"{name_parts[0]}-signed.jpg"
+        else:
+            expected_signed_filename = f"{name_parts[0]}-signed{name_parts[1]}"
+        
+        signed_filename = expected_signed_filename
+        signed_path = os.path.join(host_output_dir, signed_filename)
+        
+        if not os.path.exists(signed_path):
+            # Try to find any signed file in the output directory
+            if os.path.exists(host_output_dir):
+                files = os.listdir(host_output_dir)
+                if files:
+                    # Find the most recently modified file
+                    files_with_time = [(f, os.path.getmtime(os.path.join(host_output_dir, f))) for f in files]
+                    files_with_time.sort(key=lambda x: x[1], reverse=True)
+                    signed_filename = files_with_time[0][0]
+                    signed_path = os.path.join(host_output_dir, signed_filename)
+                else:
+                    return jsonify({
+                        'error': 'Signed file not found in output directory',
+                        'details': result.stdout + '\n' + result.stderr
+                    }), 500
+            else:
+                return jsonify({
+                    'error': 'Output directory not found',
+                    'details': result.stdout + '\n' + result.stderr
+                }), 500
+        
+        # Copy signed file to our output directory
+        final_output_path = os.path.join(output_dir, signed_filename)
+        shutil.copy2(signed_path, final_output_path)
+        
         return jsonify({
             'message': 'File signed successfully',
             'filename': signed_filename,
-            'download_url': f'/download/{file_id}/{signed_filename}',
-            'common_name': cn,
-            'issuer': iss,
+            'download_url': f'/download/{filename.rsplit(".", 1)[0]}/{signed_filename}'
         }), 200
+        
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Signing process timed out'}), 500
     except Exception as e:
-        import traceback; traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-
-
 
 @app.route('/download/<file_id>/<filename>', methods=['GET'])
 def download_file(file_id, filename):
@@ -1051,47 +1205,236 @@ def sign_and_watermark_upload():
             except:
                 pass
             
-            # Step 2: Sign the watermarked file in-process (no Docker needed).
+            # Step 2: Sign the watermarked temp file
+            # Use the same signing logic as /upload endpoint
+            watermarked_filename = os.path.basename(watermarked_path)
+            
+            # Copy watermarked file to C2PA input directory for signing
+            client_input_dir = os.path.join(C2PA_DIR, 'client_volume', 'input-images')
+            try:
+                os.makedirs(client_input_dir, exist_ok=True, mode=0o755)
+            except PermissionError as e:
+                return jsonify({
+                    'error': 'Permission denied when creating input directory',
+                    'details': f'Cannot create {client_input_dir}. Please run: sudo chown -R $USER:$USER {C2PA_DIR}/client_volume'
+                }), 500
+            
+            c2pa_input_path = os.path.join(client_input_dir, watermarked_filename)
+            try:
+                shutil.copy2(watermarked_path, c2pa_input_path)
+            except PermissionError as e:
+                return jsonify({
+                    'error': 'Permission denied when copying file',
+                    'details': f'Cannot write to {client_input_dir}. Please run: sudo chown -R $USER:$USER {C2PA_DIR}/client_volume'
+                }), 500
+            
+            # Verify signer service and wait for it to be ready (same as /upload endpoint).
+            # check_signer_running() retries internally so a flaky docker daemon
+            # doesn't false-negative the existence check.
+            try:
+                check_signer = check_signer_running()
+
+                if check_signer is None:
+                    return jsonify({
+                        'error': 'Signer service not found',
+                        'details': 'The local-signer container does not exist. Please ensure Docker containers are started.',
+                        'suggestion': 'Try running: cd c2pa-python-example && make run'
+                    }), 500
+
+                if 'Exited' in check_signer.stdout or 'Restarting' in check_signer.stdout:
+                    return jsonify({
+                        'error': 'Signer service is not running properly',
+                        'details': check_signer.stdout,
+                        'suggestion': 'Check signer logs: sudo docker compose logs local-signer'
+                    }), 500
+            except Exception as e:
+                print(f"Warning: Could not verify signer status: {e}")
+            
+            # Wait for signer to be ready (same as /upload endpoint)
+            import time
+            import urllib.request
+            print("Waiting for signer service to be ready...")
+            max_wait = 120
+            waited = 0
+            signer_ready = False
+            while waited < max_wait:
+                try:
+                    response = urllib.request.urlopen('http://localhost:5050/health', timeout=2)
+                    if response.getcode() == 200:
+                        print("Signer service is ready!")
+                        signer_ready = True
+                        break
+                except Exception as e:
+                    if waited % 20 == 0:
+                        print(f"Signer not ready yet... ({waited}s/{max_wait}s) - {str(e)[:50]}")
+                time.sleep(2)
+                waited += 2
+            
+            if not signer_ready:
+                return jsonify({
+                    'error': 'Signer service is not ready',
+                    'details': f'Signer did not become ready after {max_wait} seconds.',
+                    'suggestion': 'Check signer logs: sudo docker compose logs local-signer'
+                }), 500
+            
+            # Create temp .env file for client (same as /upload endpoint)
+            import tempfile
+            temp_env_file = os.path.join(C2PA_DIR, 'client_volume', '.env.client')
+            original_env_path = os.path.join(C2PA_DIR, 'local_volume', '.env')
+            temp_env_content = []
+            
+            if os.path.exists(original_env_path):
+                with open(original_env_path, 'r') as f:
+                    for line in f:
+                        if line.startswith('CLIENT_ENDPOINT='):
+                            temp_env_content.append('CLIENT_ENDPOINT=local-signer\n')
+                        else:
+                            temp_env_content.append(line)
+            
+            with open(temp_env_file, 'w') as f:
+                f.writelines(temp_env_content)
+            
+            # Run the signing command (same as /upload endpoint)
+            client_output_dir = 'client_volume/signed-images'
+            os.makedirs(os.path.join(C2PA_DIR, client_output_dir), exist_ok=True)
+
+            container_input_path = f'client_volume/input-images/{watermarked_filename}'
+
+            # Same common_name/issuer forwarding as /upload
+            entrypoint = f'python tests/client.py {container_input_path} -o {client_output_dir}'
+            _cn  = (request.form.get('common_name') or '').strip()
+            _iss = (request.form.get('issuer') or '').strip()
+            if _cn:
+                entrypoint += f' --common-name {shlex.quote(_cn)}'
+            if _iss:
+                entrypoint += f' --issuer {shlex.quote(_iss)}'
+
+            docker_cmd = [
+                'docker', 'compose',
+                'run',
+                '--rm',
+                '-e', f'CLIENT_ENV_FILE_PATH=client_volume/.env.client',
+                '--entrypoint', entrypoint,
+                'client'
+            ]
+
+            try:
+                result = subprocess.run(
+                    docker_cmd,
+                    cwd=C2PA_DIR,
+                    capture_output=True,
+                    text=True,
+                    timeout=300
+                )
+                
+                if result.returncode != 0:
+                    error_msg = result.stderr if result.stderr else result.stdout
+                    return jsonify({
+                        'error': 'Failed to sign file',
+                        'details': error_msg,
+                        'stdout': result.stdout[:500] if result.stdout else '',
+                        'returncode': result.returncode
+                    }), 500
+            except subprocess.TimeoutExpired:
+                return jsonify({
+                    'error': 'Signing process timed out after 5 minutes',
+                    'details': 'The signing operation took too long.'
+                }), 500
+            except Exception as e:
+                import traceback
+                error_trace = traceback.format_exc()
+                return jsonify({
+                    'error': 'Exception while running signing command',
+                    'details': str(e),
+                    'trace': error_trace
+                }), 500
+            finally:
+                # Clean up temp .env file
+                try:
+                    if os.path.exists(temp_env_file):
+                        os.remove(temp_env_file)
+                except:
+                    pass
+            
+            if result.returncode != 0:
+                return jsonify({
+                    'error': 'Signing process failed',
+                    'details': result.stdout + '\n' + result.stderr
+                }), 500
+            
+            # Find the signed file
+            host_output_dir = os.path.join(C2PA_DIR, client_output_dir)
+            name_parts = os.path.splitext(watermarked_filename)
+            original_ext = name_parts[1].lower()
+            
+            if original_ext == '.png':
+                expected_signed_filename = f"{name_parts[0]}-signed.jpg"
+            else:
+                expected_signed_filename = f"{name_parts[0]}-signed{original_ext}"
+            
+            signed_filename = expected_signed_filename
+            signed_path = os.path.join(host_output_dir, signed_filename)
+            
+            if not os.path.exists(signed_path):
+                if os.path.exists(host_output_dir):
+                    files = os.listdir(host_output_dir)
+                    if files:
+                        files_with_time = [(f, os.path.getmtime(os.path.join(host_output_dir, f))) for f in files]
+                        files_with_time.sort(key=lambda x: x[1], reverse=True)
+                        signed_filename = files_with_time[0][0]
+                        signed_path = os.path.join(host_output_dir, signed_filename)
+                    else:
+                        return jsonify({
+                            'error': 'Signed file not found',
+                            'details': result.stdout + '\n' + result.stderr
+                        }), 500
+                else:
+                    return jsonify({
+                        'error': 'Output directory not found',
+                        'details': result.stdout + '\n' + result.stderr
+                    }), 500
+            
+            # Copy signed file to our output directory for user download
             file_id = os.path.splitext(filename)[0]
             output_dir = os.path.join(OUTPUT_FOLDER, file_id)
             os.makedirs(output_dir, exist_ok=True)
-            signed_filename = f"{file_id}-signed.jpg"
             final_output_path = os.path.join(output_dir, signed_filename)
-
-            cn  = (request.form.get('common_name') or '').strip() or 'DCP signer'
-            iss = (request.form.get('issuer') or '').strip() or 'DCP Demo CA'
-            try:
-                actual_signed = _sign_image_inproc(watermarked_path, final_output_path, cn, iss)
-                signed_filename = os.path.basename(actual_signed)
-                final_output_path = actual_signed
-            except Exception as sign_err:
-                import traceback; traceback.print_exc()
-                return jsonify({
-                    'error': 'In-process C2PA signing failed',
-                    'details': str(sign_err)
-                }), 500
-
-            # Clean up temp watermarked file (not user-accessible) — moved up
-            # from below so the legacy Docker block can be cleanly removed.
+            shutil.copy2(signed_path, final_output_path)
+            
+            # Clean up temp watermarked file (not accessible to users)
             try:
                 os.remove(watermarked_path)
-            except Exception:
+            except:
                 pass
-
-            # Re-read manifest using c2pa-python so the response includes it
-            # (DCP tab uses this to confirm signing happened).
-            import json as _json
+            
+            # Step 3: Read C2PA manifest from signed file
+            import json
             c2pa_manifest = None
             try:
-                from c2pa import Reader as _C2paReader
-                with open(final_output_path, 'rb') as _f:
-                    _r = _C2paReader.try_create('image/jpeg', _f)
-                    if _r is not None:
-                        c2pa_manifest = _json.loads(_r.json())
-            except Exception as _re:
-                print(f"Warning: post-sign manifest read failed: {_re}")
-
-            # Decode watermark from the signed file (best-effort, like before).
+                c2pa_cmd = 'c2patool'
+                try:
+                    c2pa_result = subprocess.run(
+                        [c2pa_cmd, final_output_path],
+                        capture_output=True,
+                        text=True,
+                        timeout=30
+                    )
+                except FileNotFoundError:
+                    c2pa_cmd = 'c2pa'
+                    c2pa_result = subprocess.run(
+                        [c2pa_cmd, final_output_path],
+                        capture_output=True,
+                        text=True,
+                        timeout=30
+                    )
+                
+                if c2pa_result.returncode == 0 and c2pa_result.stdout.strip():
+                    c2pa_manifest = json.loads(c2pa_result.stdout.strip())
+            except Exception as c2pa_err:
+                print(f"Warning: Failed to read C2PA manifest: {c2pa_err}")
+            
+            # Step 4: Decode watermark from signed file (best-effort, used only
+            # to confirm the embed survived; result not surfaced in response).
             watermark_result = None
             watermark_acc = None
             try:
@@ -1104,28 +1447,29 @@ def sign_and_watermark_upload():
                     watermark_acc = decode_result.get('accuracy')
             except Exception as decode_err:
                 print(f"Warning: Failed to decode watermark from signed file: {decode_err}")
-
+            
             response_data = {
                 'success': True,
                 'download_url': f'/download/{file_id}/{signed_filename}',
                 'filename': signed_filename,
-                'message': 'Image signed and watermarked successfully',
-                'common_name': cn,
-                'issuer': iss,
+                'message': 'Image signed and watermarked successfully'
             }
+            
             if c2pa_manifest:
                 response_data['manifest'] = c2pa_manifest
                 response_data['has_c2pa'] = True
             else:
                 response_data['has_c2pa'] = False
+            
             if watermark_result is not None:
                 response_data['watermark'] = watermark_result
                 response_data['watermark_accuracy'] = watermark_acc
                 response_data['has_watermark'] = watermark_acc >= 0.1 if watermark_acc is not None else True
             else:
                 response_data['has_watermark'] = False
+            
             return jsonify(response_data), 200
-
+            
         except RuntimeError as e:
             try:
                 os.remove(temp_input_path)

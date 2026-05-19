@@ -142,10 +142,11 @@ def get_image_mime_type(file_path: str) -> str:
 
 
 # Example manifest - simplified to match working app.py structure
-def create_manifest(author=None, title=None):
-    """Create a manifest JSON string. If author/title are provided, add a
-    Schema.org CreativeWork assertion so they appear in the verified manifest
-    alongside the cert-derived common_name / issuer."""
+def create_manifest(common_name=None, issuer=None):
+    """Create a manifest JSON string. If common_name / issuer are provided,
+    add a Schema.org CreativeWork assertion holding the user-claimed signing
+    identity. The frontend displays these as Common name / Issuer rows next
+    to the cert-derived fields."""
     assertions = [
         {
             "label": "c2pa.actions",
@@ -154,8 +155,8 @@ def create_manifest(author=None, title=None):
                     {
                         "action": "c2pa.created",
                         "softwareAgent": {
-                            "name": "C2PA Python Example",
-                            "version": "0.2.0"
+                            "name": "Digital Content Protector",
+                            "version": "0.1.0"
                         },
                         "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCreation"
                     }
@@ -164,15 +165,15 @@ def create_manifest(author=None, title=None):
         }
     ]
 
-    if author or title:
+    if common_name or issuer:
         cw = {
             "@context": "https://schema.org",
             "@type": "CreativeWork",
         }
-        if author:
-            cw["author"] = [{"@type": "Person", "name": author}]
-        if title:
-            cw["name"] = title
+        if common_name:
+            cw["author"] = [{"@type": "Person", "name": common_name}]
+        if issuer:
+            cw["publisher"] = {"@type": "Organization", "name": issuer}
         assertions.append({
             "label": "stds.schema-org.CreativeWork",
             "data": cw,
@@ -204,10 +205,10 @@ parser = argparse.ArgumentParser(description="Sign files with C2PA.")
 parser.add_argument("files", metavar="F", type=str, nargs="+", help="Files to be signed")
 parser.add_argument("-o", "--output", type=str, required=True, help="Output directory")
 parser.add_argument("-f", "--envfile", type=str, required=False, help="Config environment file")
-parser.add_argument("--author", type=str, default=None,
-                    help="Optional author name to embed as a Schema.org CreativeWork assertion")
-parser.add_argument("--title", type=str, default=None,
-                    help="Optional work title to embed as a Schema.org CreativeWork assertion")
+parser.add_argument("--common-name", dest="common_name", type=str, default=None,
+                    help="User-claimed Common name (signer identity) — added as CreativeWork.author")
+parser.add_argument("--issuer", type=str, default=None,
+                    help="User-claimed Issuer / publishing org — added as CreativeWork.publisher")
 
 args = parser.parse_args()
 
@@ -291,7 +292,7 @@ for file in args.files:
                 raise
         
         # Create manifest for this file
-        file_manifest = create_manifest(author=args.author, title=args.title)
+        file_manifest = create_manifest(common_name=args.common_name, issuer=args.issuer)
         
         with Builder(file_manifest) as builder:
             # Add thumbnail resource (optional, for metadata)
