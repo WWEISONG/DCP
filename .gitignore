@@ -42,8 +42,8 @@ c2patool/
 VINE/vine/w_bench_utils/image_to_video/generative-models/assets/*.gif
 
 # ===== Example/test artefacts =====
-example-img-signed.jpg
-watermarked_img.png
+example-img-signed.*
+watermarked_img.*
 
 # ===== Local notes =====
 taskDesc.md

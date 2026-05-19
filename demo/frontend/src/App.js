@@ -123,14 +123,17 @@ function C2paPanel() {
   const [downloadName, setDownloadName] = useState(null);
   const [manifest, setManifest] = useState(null);
   const [hasC2pa, setHasC2pa] = useState(null);
-  const [author, setAuthor] = useState('');
-  const [title, setTitle] = useState('');
+  const [commonName, setCommonName] = useState('');
+  const [issuer, setIssuer] = useState('');
+  // The issuer doesn't come back through c2pa-python's signature_info JSON,
+  // so for fresh signs we remember what the user typed and surface it.
+  const [issuerFromSign, setIssuerFromSign] = useState(null);
 
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null);
     setManifest(null); setHasC2pa(null);
-    setAuthor(''); setTitle('');
+    setCommonName(''); setIssuer(''); setIssuerFromSign(null);
   };
 
   const onFile = useCallback((f) => {
@@ -146,17 +149,20 @@ function C2paPanel() {
   const handleSign = async () => {
     if (!file || busy) return;
     setBusy('sign'); setError(null); setManifest(null); setHasC2pa(null);
+    setIssuerFromSign(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (author.trim()) formData.append('author', author.trim());
-      if (title.trim())  formData.append('title',  title.trim());
+      if (commonName.trim()) formData.append('common_name', commonName.trim());
+      if (issuer.trim())     formData.append('issuer',      issuer.trim());
       const resp = await axios.post(`${API_URL}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 180000,
       });
       setDownloadUrl(resp.data.download_url);
       setDownloadName(resp.data.filename);
+      // Remember the issuer we just used; the verify pass doesn't surface it.
+      if (resp.data.issuer) setIssuerFromSign(resp.data.issuer);
 
       try {
         const signedResp = await axios.get(`${API_URL}${resp.data.download_url}`, {
@@ -234,27 +240,27 @@ function C2paPanel() {
 
       <div className="manifest-input-grid">
         <div className="manifest-input-field">
-          <label htmlFor="c2pa-author" className="wm-message-label">Author <span className="manifest-input-hint">(optional)</span></label>
+          <label htmlFor="c2pa-common-name" className="wm-message-label">Common name <span className="manifest-input-hint">(optional)</span></label>
           <input
-            id="c2pa-author"
+            id="c2pa-common-name"
             type="text"
             className="wm-message-input"
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
+            value={commonName}
+            onChange={(e) => setCommonName(e.target.value)}
             placeholder="e.g. Wei Song"
             maxLength={120}
             disabled={!!busy}
           />
         </div>
         <div className="manifest-input-field">
-          <label htmlFor="c2pa-title" className="wm-message-label">Title <span className="manifest-input-hint">(optional)</span></label>
+          <label htmlFor="c2pa-issuer" className="wm-message-label">Issuer <span className="manifest-input-hint">(optional)</span></label>
           <input
-            id="c2pa-title"
+            id="c2pa-issuer"
             type="text"
             className="wm-message-input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. UNSW campus photo"
+            value={issuer}
+            onChange={(e) => setIssuer(e.target.value)}
+            placeholder="e.g. UNSW Sydney"
             maxLength={120}
             disabled={!!busy}
           />
@@ -298,27 +304,19 @@ function C2paPanel() {
       {hasC2pa === true && manifest && (
         <div className="feature-result">
           <h3 className="result-title">C2PA manifest</h3>
-          <C2paManifestView manifest={manifest} />
+          <C2paManifestView manifest={manifest} issuerFallback={issuerFromSign} />
         </div>
       )}
     </section>
   );
 }
 
-function C2paManifestView({ manifest }) {
+function C2paManifestView({ manifest, issuerFallback }) {
   const activeId = manifest.active_manifest;
   const active = activeId && manifest.manifests ? manifest.manifests[activeId] : null;
   const sig = active?.signature_info || {};
   const validationState = manifest.validation_state || 'unknown';
   const isInvalid = validationState && validationState !== 'Valid';
-
-  // If a stds.schema-org.CreativeWork assertion was added at sign time, pull
-  // out the human-readable Author/Title so we can show them prominently.
-  const creativeWork = (active?.assertions || []).find(
-    a => a.label === 'stds.schema-org.CreativeWork'
-  )?.data;
-  const author = creativeWork?.author?.[0]?.name || null;
-  const workTitle = creativeWork?.name || null;
 
   // Pull a concise list of failure explanations so we can show them with the warning.
   const failures = manifest?.validation_results?.activeManifest?.failure || [];
@@ -327,6 +325,11 @@ function C2paManifestView({ manifest }) {
     .filter(Boolean)
     .slice(0, 3)
     .join('; ');
+
+  // c2pa-python's signature_info only includes common_name reliably; issuer
+  // isn't always surfaced for self-rooted chains. Use the fallback the caller
+  // provides (typically the value the user typed at sign time).
+  const issuerDisplay = sig.issuer || issuerFallback || '—';
 
   return (
     <div className="c2pa-manifest-view">
@@ -337,13 +340,8 @@ function C2paManifestView({ manifest }) {
         />
       )}
       <div className="manifest-info">
-        {author && (
-          <div className="manifest-row"><span>Author</span><strong>{author}</strong></div>
-        )}
-        {workTitle && (
-          <div className="manifest-row"><span>Title</span><strong>{workTitle}</strong></div>
-        )}
-        <div className="manifest-row"><span>Issuer</span><strong>{sig.issuer || '—'}</strong></div>
+        <div className="manifest-row"><span>Common name</span><strong>{sig.common_name || '—'}</strong></div>
+        <div className="manifest-row"><span>Issuer</span><strong>{issuerDisplay}</strong></div>
         <div className="manifest-row"><span>Signed at</span><strong>{sig.time ? new Date(sig.time).toLocaleString() : '—'}</strong></div>
         <div className="manifest-row"><span>Claim generator</span><strong>{active?.claim_generator || '—'}</strong></div>
         <div className="manifest-row">
@@ -663,13 +661,13 @@ function CombinedPanel() {
   const [error, setError] = useState(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [downloadName, setDownloadName] = useState(null);
-  const [author, setAuthor] = useState('');
-  const [title, setTitle] = useState('');
+  const [commonName, setCommonName] = useState('');
+  const [issuer, setIssuer] = useState('');
 
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null);
-    setAuthor(''); setTitle('');
+    setCommonName(''); setIssuer('');
   };
 
   const onFile = useCallback((f) => {
@@ -687,8 +685,8 @@ function CombinedPanel() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (author.trim()) formData.append('author', author.trim());
-      if (title.trim())  formData.append('title',  title.trim());
+      if (commonName.trim()) formData.append('common_name', commonName.trim());
+      if (issuer.trim())     formData.append('issuer',      issuer.trim());
       const resp = await axios.post(`${API_URL}/sign-and-watermark-upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 240000,
@@ -726,27 +724,27 @@ function CombinedPanel() {
 
         <div className="manifest-input-grid">
           <div className="manifest-input-field">
-            <label htmlFor="dcp-author" className="wm-message-label">Author <span className="manifest-input-hint">(optional)</span></label>
+            <label htmlFor="dcp-common-name" className="wm-message-label">Common name <span className="manifest-input-hint">(optional)</span></label>
             <input
-              id="dcp-author"
+              id="dcp-common-name"
               type="text"
               className="wm-message-input"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
+              value={commonName}
+              onChange={(e) => setCommonName(e.target.value)}
               placeholder="e.g. Wei Song"
               maxLength={120}
               disabled={busy}
             />
           </div>
           <div className="manifest-input-field">
-            <label htmlFor="dcp-title" className="wm-message-label">Title <span className="manifest-input-hint">(optional)</span></label>
+            <label htmlFor="dcp-issuer" className="wm-message-label">Issuer <span className="manifest-input-hint">(optional)</span></label>
             <input
-              id="dcp-title"
+              id="dcp-issuer"
               type="text"
               className="wm-message-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. UNSW campus photo"
+              value={issuer}
+              onChange={(e) => setIssuer(e.target.value)}
+              placeholder="e.g. UNSW Sydney"
               maxLength={120}
               disabled={busy}
             />
