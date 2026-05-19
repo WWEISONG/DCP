@@ -1833,21 +1833,13 @@ def tamper_watermark_noise_upload():
             with Image.open(temp_in) as img:
                 if img.mode not in ('RGB', 'L'):
                     img = img.convert('RGB')
-
-                # Combo attack — visually mild but effective against neural
-                # watermarks:
-                #  1. small Gaussian blur kills the high-frequency components
-                #     where the watermark lives (subjectively just "slight
-                #     softness", almost imperceptible)
-                #  2. modest Gaussian noise on top adds a low grain that the
-                #     decoder can't lock onto
-                # The image stays clearly recognisable; the decoded message
-                # comes back as garbled bytes that fail the text heuristic.
-                blur_radius = 1.5
-                sigma = 35.0
-                img = img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
                 arr = np.array(img, dtype=np.float32)
 
+            # Light additive Gaussian noise — visible grain but image stays
+            # clearly recognisable. Note: VINE is robust by design, so a mild
+            # attack like this may NOT always destroy the watermark — that's
+            # actually a feature of the demo (showcases robustness too).
+            sigma = 20.0
             rng = np.random.default_rng(seed=0xC2BA)  # deterministic for demo
             noise = rng.normal(0.0, sigma, size=arr.shape).astype(np.float32)
             noisy = np.clip(arr + noise, 0, 255).astype(np.uint8)
@@ -1862,7 +1854,7 @@ def tamper_watermark_noise_upload():
             'success': True,
             'filename': tampered_name,
             'download_url': f'/download/{file_id}/{tampered_name}',
-            'message': f'Slight blur (r={blur_radius}) + light Gaussian noise (σ={int(sigma)})',
+            'message': f'Light Gaussian noise (σ={int(sigma)})',
             'tamper_mode': 'watermark-noise',
         }), 200
     except Exception as e:
@@ -1892,23 +1884,17 @@ def tamper_watermark_recompress_upload():
             with Image.open(temp_in) as img:
                 if img.mode not in ('RGB', 'L'):
                     img = img.convert('RGB')
-                # Output is JPEG regardless of input ext.
                 name_parts = os.path.splitext(filename)
                 file_id = name_parts[0]
                 out_dir = os.path.join(OUTPUT_FOLDER, file_id)
                 os.makedirs(out_dir, exist_ok=True)
                 tampered_name = f"{name_parts[0]}-tampered-recompress.jpg"
                 out_path = os.path.join(out_dir, tampered_name)
-                # First downscale aggressively, save, reload, then re-save at
-                # very low quality. The combination of scale loss + low-q JPEG
-                # is what reliably wipes VINE's signal — quality=10 alone keeps
-                # accuracy above the detection threshold.
-                w, h = img.size
-                small = img.resize((max(w // 4, 32), max(h // 4, 32)), Image.BILINEAR)
-                small.save(out_path, 'JPEG', quality=5)
-                with Image.open(out_path) as reloaded:
-                    blown = reloaded.resize((w, h), Image.BILINEAR)
-                    blown.save(out_path, 'JPEG', quality=8)
+                # Mild JPEG re-compression at quality=30. Mostly imperceptible
+                # except in flat colour areas (slight blocking). Watermark may
+                # or may not survive — VINE is robust to moderate JPEG.
+                quality = 30
+                img.save(out_path, 'JPEG', quality=quality)
         finally:
             try: os.remove(temp_in)
             except Exception: pass
@@ -1917,7 +1903,7 @@ def tamper_watermark_recompress_upload():
             'success': True,
             'filename': tampered_name,
             'download_url': f'/download/{file_id}/{tampered_name}',
-            'message': 'Downscaled 4x and re-encoded as JPEG quality=5/8',
+            'message': f'Re-encoded as JPEG quality={quality}',
             'tamper_mode': 'watermark-recompress',
         }), 200
     except Exception as e:

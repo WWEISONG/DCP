@@ -1330,9 +1330,9 @@ function WatermarkTamperPanel() {
           </div>
 
           <div className="tamper-mode-block">
-            <h3 className="tamper-mode-title">A. Add Gaussian noise</h3>
+            <h3 className="tamper-mode-title">A. Add light Gaussian noise</h3>
             <p className="tamper-mode-desc">
-              Add heavy random noise to every pixel (σ=90). The image stays recognizable but the watermark bits are scrambled.
+              Add mild random noise to every pixel (σ=20). Visible grain but image stays clear. VINE is robust, so the watermark may still survive this attack — that's part of the story.
             </p>
             <div className="feature-actions">
               <button
@@ -1348,9 +1348,9 @@ function WatermarkTamperPanel() {
           </div>
 
           <div className="tamper-mode-block">
-            <h3 className="tamper-mode-title">B. Aggressive JPEG re-compression</h3>
+            <h3 className="tamper-mode-title">B. JPEG re-compression</h3>
             <p className="tamper-mode-desc">
-              Downscale 4× and re-encode as JPEG at quality≈5. Realistic “upload to a low-quality channel” attack.
+              Re-encode as JPEG at quality≈30 — the kind of compression a social-media upload pass might apply. Mostly imperceptible. The watermark may or may not survive.
             </p>
             <div className="feature-actions">
               <button
