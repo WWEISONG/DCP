@@ -281,7 +281,11 @@ for file in args.files:
                     elif img.mode != 'RGB':
                         img = img.convert('RGB')
                     
-                    img.save(temp_jpeg_path, 'JPEG', quality=95)
+                    # quality=100 + subsampling=0 (no chroma subsampling) is
+                    # as close to lossless as JPEG gets. Default quality=95
+                    # with subsampling can be enough to destroy a neural
+                    # watermark embedded just before this conversion (DCP flow).
+                    img.save(temp_jpeg_path, 'JPEG', quality=100, subsampling=0)
                 source_file_path = temp_jpeg_path
                 image_mime_type = 'image/jpeg'
                 print(f"Converted to JPEG: {temp_jpeg_path}")

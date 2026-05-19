@@ -920,9 +920,10 @@ def watermark_upload():
                             elif img.mode != 'RGB':
                                 img = img.convert('RGB')
                             
-                            # Save as JPEG for C2PA signing
+                            # Save as JPEG for C2PA signing. quality=100 +
+                            # subsampling=0 to preserve the watermark signal.
                             watermarked_jpeg_path = os.path.join(file_output_dir, f'{os.path.splitext(os.path.basename(watermarked_path))[0]}.jpg')
-                            img.save(watermarked_jpeg_path, 'JPEG', quality=95)
+                            img.save(watermarked_jpeg_path, 'JPEG', quality=100, subsampling=0)
                         
                         # Re-sign using the same signing process as /upload endpoint
                         client_input_dir = os.path.join(C2PA_DIR, 'client_volume', 'input-images')
@@ -1464,7 +1465,10 @@ def sign_and_watermark_upload():
             if watermark_result is not None:
                 response_data['watermark'] = watermark_result
                 response_data['watermark_accuracy'] = watermark_acc
-                response_data['has_watermark'] = watermark_acc >= 0.1 if watermark_acc is not None else True
+                # Same threshold as /decode-watermark-upload so the DCP response
+                # and the standalone Decode flow agree about whether a watermark
+                # is actually recoverable.
+                response_data['has_watermark'] = watermark_acc >= 0.85 if watermark_acc is not None else False
             else:
                 response_data['has_watermark'] = False
             
