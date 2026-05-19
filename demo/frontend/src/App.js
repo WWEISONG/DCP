@@ -702,11 +702,14 @@ function CombinedPanel() {
   const [issuer, setIssuer] = useState('');
   const [wmMessage, setWmMessage] = useState('UNSW CSE');
   const [wmAccuracy, setWmAccuracy] = useState(null);
+  const [useIdentityHash, setUseIdentityHash] = useState(false);
+  const [derivedHash, setDerivedHash] = useState('');
 
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null);
     setCommonName(''); setIssuer(''); setWmMessage('UNSW CSE'); setWmAccuracy(null);
+    setUseIdentityHash(false); setDerivedHash('');
   };
 
   const onFile = useCallback((f) => {
@@ -718,18 +721,41 @@ function CombinedPanel() {
     reader.readAsDataURL(f);
   }, []);
 
-  const wmBytes = new TextEncoder().encode(wmMessage).length;
+  // When the "derive" toggle is on and both CN + Issuer are filled, compute
+  // a 12-hex-char SHA-256 prefix of (common_name | issuer). Bound to the same
+  // 96-bit payload size as the typed watermark. When either field is empty,
+  // we leave derivedHash blank and the UI nudges the user to fill them in.
+  useEffect(() => {
+    if (!useIdentityHash) { setDerivedHash(''); return; }
+    const cn = commonName.trim();
+    const iss = issuer.trim();
+    if (!cn || !iss) { setDerivedHash(''); return; }
+    let cancelled = false;
+    (async () => {
+      const buf = new TextEncoder().encode(cn + '|' + iss);
+      const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+      if (cancelled) return;
+      const hex = Array.from(new Uint8Array(hashBuf))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      setDerivedHash(hex.slice(0, 12));
+    })();
+    return () => { cancelled = true; };
+  }, [useIdentityHash, commonName, issuer]);
+
+  const effectiveMessage = useIdentityHash ? derivedHash : wmMessage;
+  const wmBytes = new TextEncoder().encode(effectiveMessage).length;
   const wmTooLong = wmBytes > 12;
+  const identityIncomplete = useIdentityHash && (!commonName.trim() || !issuer.trim());
 
   const handleRun = async () => {
-    if (!file || busy || wmTooLong) return;
+    if (!file || busy || wmTooLong || identityIncomplete) return;
     setBusy(true); setError(null); setWmAccuracy(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
       if (commonName.trim()) formData.append('common_name', commonName.trim());
       if (issuer.trim())     formData.append('issuer',      issuer.trim());
-      if (wmMessage)         formData.append('message',     wmMessage);
+      if (effectiveMessage)  formData.append('message',     effectiveMessage);
       const resp = await axios.post(`${API_URL}/sign-and-watermark-upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 240000,
@@ -798,30 +824,76 @@ function CombinedPanel() {
         </div>
 
         <div className="wm-message-field">
-          <label htmlFor="dcp-wm-message" className="wm-message-label">
-            Watermark message
-            <span className={`wm-message-counter ${wmTooLong ? 'over' : ''}`}>
-              {wmBytes}/12 bytes
-            </span>
+          <label className="wm-c2pa-toggle">
+            <input
+              type="checkbox"
+              checked={useIdentityHash}
+              onChange={(e) => setUseIdentityHash(e.target.checked)}
+              disabled={busy}
+            />
+            <span>Derive watermark from C2PA identity (SHA-256 of Common name + Issuer)</span>
           </label>
-          <input
-            id="dcp-wm-message"
-            type="text"
-            className="wm-message-input"
-            value={wmMessage}
-            onChange={(e) => setWmMessage(e.target.value)}
-            placeholder="e.g. UNSW CSE"
-            disabled={busy}
-          />
-          {wmTooLong && (
-            <p className="wm-message-hint">
-              Too long — the watermark stores at most 12 UTF-8 bytes; anything beyond will be truncated.
-            </p>
+
+          {!useIdentityHash && (
+            <>
+              <label htmlFor="dcp-wm-message" className="wm-message-label">
+                Watermark message
+                <span className={`wm-message-counter ${wmTooLong ? 'over' : ''}`}>
+                  {wmBytes}/12 bytes
+                </span>
+              </label>
+              <input
+                id="dcp-wm-message"
+                type="text"
+                className="wm-message-input"
+                value={wmMessage}
+                onChange={(e) => setWmMessage(e.target.value)}
+                placeholder="e.g. UNSW CSE"
+                disabled={busy}
+              />
+              {wmTooLong && (
+                <p className="wm-message-hint">
+                  Too long — the watermark stores at most 12 UTF-8 bytes; anything beyond will be truncated.
+                </p>
+              )}
+            </>
+          )}
+
+          {useIdentityHash && identityIncomplete && (
+            <WarningBanner
+              title="Common name and Issuer are required for identity-derived watermark."
+              detail="Fill in both fields above, or uncheck the box to type a watermark message manually."
+            />
+          )}
+
+          {useIdentityHash && !identityIncomplete && (
+            <>
+              <label htmlFor="dcp-wm-message" className="wm-message-label">
+                Derived watermark
+                <span className="wm-message-counter">{wmBytes}/12 bytes</span>
+              </label>
+              <input
+                id="dcp-wm-message"
+                type="text"
+                className="wm-message-input wm-message-input--derived"
+                value={derivedHash}
+                readOnly
+                disabled={busy}
+                title="SHA-256 prefix of Common name + Issuer"
+              />
+              <p className="wm-message-hint wm-message-hint--info">
+                Binds the watermark to the identity claim. A C2PA viewer can recover this watermark from the pixels and confirm it matches the manifest's Common name + Issuer.
+              </p>
+            </>
           )}
         </div>
 
         <div className="feature-actions">
-          <button className="feature-btn primary" onClick={handleRun} disabled={!file || busy || wmTooLong}>
+          <button
+            className="feature-btn primary"
+            onClick={handleRun}
+            disabled={!file || busy || wmTooLong || identityIncomplete}
+          >
             {busy ? (<><span className="btn-spinner"></span>Processing…</>) : 'Sign & watermark'}
           </button>
         </div>
@@ -836,7 +908,7 @@ function CombinedPanel() {
             {wmAccuracy != null && (
               <div className="result-row">
                 <span>
-                  Watermark embedded with message <strong>“{wmMessage}”</strong>
+                  Watermark embedded with {useIdentityHash ? 'identity-derived hash' : 'message'} <strong>“{effectiveMessage}”</strong>
                   {' — recoverable at '}<strong>{(wmAccuracy * 100).toFixed(1)}%</strong> bit accuracy.
                 </span>
               </div>
