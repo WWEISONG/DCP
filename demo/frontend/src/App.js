@@ -338,13 +338,12 @@ function C2paManifestView({ manifest }) {
       )}
       <div className="manifest-info">
         {author && (
-          <div className="manifest-row"><span>Author (claimed)</span><strong>{author}</strong></div>
+          <div className="manifest-row"><span>Author</span><strong>{author}</strong></div>
         )}
         {workTitle && (
-          <div className="manifest-row"><span>Title (claimed)</span><strong>{workTitle}</strong></div>
+          <div className="manifest-row"><span>Title</span><strong>{workTitle}</strong></div>
         )}
         <div className="manifest-row"><span>Issuer</span><strong>{sig.issuer || '—'}</strong></div>
-        <div className="manifest-row"><span>Common name</span><strong>{sig.common_name || '—'}</strong></div>
         <div className="manifest-row"><span>Signed at</span><strong>{sig.time ? new Date(sig.time).toLocaleString() : '—'}</strong></div>
         <div className="manifest-row"><span>Claim generator</span><strong>{active?.claim_generator || '—'}</strong></div>
         <div className="manifest-row">
