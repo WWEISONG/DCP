@@ -1034,7 +1034,33 @@ def watermark_upload():
                         os.makedirs(client_input_dir, exist_ok=True)
                         c2pa_input_filename = os.path.basename(watermarked_jpeg_path)
                         c2pa_input_path = os.path.join(client_input_dir, c2pa_input_filename)
-                        shutil.copy2(watermarked_jpeg_path, c2pa_input_path)
+                        # Copy via PIL (same as /upload) to ensure no stale manifest bytes
+                        from PIL import Image as _PILR
+                        with _PILR.open(watermarked_jpeg_path) as _ri:
+                            if _ri.mode != 'RGB':
+                                _ri = _ri.convert('RGB')
+                            _ri.save(c2pa_input_path, 'JPEG', quality=100, subsampling=0)
+
+                        # Extract common_name / issuer from the original CreativeWork assertion
+                        # so the re-signed manifest carries the same identity as the source image.
+                        _resign_cn = None
+                        _resign_iss = None
+                        try:
+                            for _m in (original_c2pa_manifest.get('manifests') or {}).values():
+                                for _a in (_m.get('assertions') or []):
+                                    if _a.get('label') == 'stds.schema-org.CreativeWork':
+                                        _cw = _a.get('data', {})
+                                        _authors = _cw.get('author', [])
+                                        if _authors:
+                                            _resign_cn = _authors[0].get('name')
+                                        _pub = _cw.get('publisher', {})
+                                        if _pub:
+                                            _resign_iss = _pub.get('name')
+                                        break
+                                if _resign_cn or _resign_iss:
+                                    break
+                        except Exception:
+                            pass
                         
                         # Wait for signer to be ready
                         import time
@@ -1073,12 +1099,27 @@ def watermark_upload():
                             client_output_dir = 'client_volume/signed-images'
                             os.makedirs(os.path.join(C2PA_DIR, client_output_dir), exist_ok=True)
                             container_input_path = f'client_volume/input-images/{c2pa_input_filename}'
-                            
+
+                            # Delete stale output so a failed run can't return the old file
+                            _wm_stale = os.path.join(C2PA_DIR, client_output_dir,
+                                                     f"{os.path.splitext(c2pa_input_filename)[0]}-signed.jpg")
+                            try:
+                                if os.path.exists(_wm_stale):
+                                    os.remove(_wm_stale)
+                            except Exception:
+                                pass
+
+                            _ep = f'python tests/client.py {container_input_path} -o {client_output_dir}'
+                            if _resign_cn:
+                                _ep += f' --common-name {shlex.quote(_resign_cn)}'
+                            if _resign_iss:
+                                _ep += f' --issuer {shlex.quote(_resign_iss)}'
+
                             docker_cmd = [
                                 'docker', 'compose',
                                 'run', '--rm',
                                 '-e', f'CLIENT_ENV_FILE_PATH=client_volume/.env.client',
-                                '--entrypoint', f'python tests/client.py {container_input_path} -o {client_output_dir}',
+                                '--entrypoint', _ep,
                                 'client'
                             ]
                             
