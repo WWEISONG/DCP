@@ -436,7 +436,7 @@ function WatermarkPanel() {
     setFile(null); setPreview(null); setError(null);
     setDownloadUrl(null); setDownloadName(null); setEncodedMessage(null);
     setDecoded(null); setHasWatermark(null);
-    setDerivedHash(null); setHashStatus(null);
+    setUseC2paHash(false); setDerivedHash(null); setHashStatus(null);
   };
 
   const onFile = useCallback((f) => {
@@ -444,7 +444,7 @@ function WatermarkPanel() {
     if (err) { setError(err); return; }
     setError(null); setDownloadUrl(null); setDownloadName(null);
     setEncodedMessage(null); setDecoded(null); setHasWatermark(null);
-    setDerivedHash(null); setHashStatus(null);
+    setUseC2paHash(false); setDerivedHash(null); setHashStatus(null);
     const reader = new FileReader();
     reader.onloadend = () => { setPreview(reader.result); setFile(f); };
     reader.readAsDataURL(f);
