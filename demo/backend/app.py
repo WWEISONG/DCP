@@ -1961,11 +1961,10 @@ def tamper_watermark_noise_upload():
                     img = img.convert('RGB')
                 arr = np.array(img, dtype=np.float32)
 
-            # Light additive Gaussian noise — visible grain but image stays
-            # clearly recognisable. Note: VINE is robust by design, so a mild
-            # attack like this may NOT always destroy the watermark — that's
-            # actually a feature of the demo (showcases robustness too).
-            sigma = 20.0
+            # Very light additive Gaussian noise — barely perceptible grain,
+            # enough to show the concept of a noise attack without visibly
+            # degrading the image or destroying the watermark.
+            sigma = 4.0
             rng = np.random.default_rng(seed=0xC2BA)  # deterministic for demo
             noise = rng.normal(0.0, sigma, size=arr.shape).astype(np.float32)
             noisy = np.clip(arr + noise, 0, 255).astype(np.uint8)
@@ -1980,7 +1979,7 @@ def tamper_watermark_noise_upload():
             'success': True,
             'filename': tampered_name,
             'download_url': f'/download/{file_id}/{tampered_name}',
-            'message': f'Light Gaussian noise (σ={int(sigma)})',
+            'message': f'Light Gaussian noise (σ={sigma:.1f})',
             'tamper_mode': 'watermark-noise',
         }), 200
     except Exception as e:
