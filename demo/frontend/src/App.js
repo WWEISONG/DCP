@@ -655,7 +655,7 @@ function WatermarkPanel() {
         <button
           className="feature-btn secondary"
           onClick={handleDecode}
-          disabled={!file || !!busy || (useC2paHash && hashStatus !== 'ok')}
+          disabled={!file || !!busy}
         >
           {busy === 'decode' ? (<><span className="btn-spinner"></span>Decoding…</>) : 'Decode watermark'}
         </button>
