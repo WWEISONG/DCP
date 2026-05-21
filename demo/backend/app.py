@@ -291,7 +291,24 @@ def upload_file():
         # The file path inside container should be relative to the mounted volume
         client_output_dir = 'client_volume/signed-images'
         os.makedirs(os.path.join(C2PA_DIR, client_output_dir), exist_ok=True)
-        
+
+        # Pre-compute the expected output filename so we can delete any stale
+        # copy from the Docker volume before signing. Without this, a rapid
+        # re-sign returns the old file (old credentials) if Docker fails or
+        # if a previous run left the file behind.
+        _name_parts = os.path.splitext(filename)
+        _original_ext = _name_parts[1].lower()
+        _pre_expected = (
+            f"{_name_parts[0]}-signed.jpg" if _original_ext == '.png'
+            else f"{_name_parts[0]}-signed{_name_parts[1]}"
+        )
+        _stale_path = os.path.join(C2PA_DIR, client_output_dir, _pre_expected)
+        try:
+            if os.path.exists(_stale_path):
+                os.remove(_stale_path)
+        except Exception:
+            pass
+
         # Path relative to container working directory (assuming client_volume is mounted)
         container_input_path = f'client_volume/input-images/{filename}'
         
