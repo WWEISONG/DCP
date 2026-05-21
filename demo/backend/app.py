@@ -613,6 +613,61 @@ def upload_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/strip-c2pa-upload', methods=['POST'])
+def strip_c2pa_upload():
+    """Return the image with its C2PA manifest removed. The C2PA data lives in
+    JPEG APP11 segments / PNG ancillary chunks — separate from the pixel data.
+    Re-encoding through PIL drops those segments, leaving a clean image."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Only JPG, JPEG, PNG allowed'}), 400
+
+    try:
+        from PIL import Image
+
+        filename = secure_filename(file.filename)
+        temp_in = os.path.join(TEMP_FOLDER, f'strip_in_{filename}')
+        file.save(temp_in)
+
+        name_parts = os.path.splitext(filename)
+        file_id = name_parts[0]
+        out_dir = os.path.join(OUTPUT_FOLDER, file_id)
+        os.makedirs(out_dir, exist_ok=True)
+
+        # Match output format to input format (sniff bytes, not just extension).
+        src_mime = sniff_image_mime(temp_in) or 'image/jpeg'
+        try:
+            with Image.open(temp_in) as img:
+                if src_mime == 'image/png':
+                    out_name = f"{file_id}-stripped.png"
+                    out_path = os.path.join(out_dir, out_name)
+                    img.save(out_path, 'PNG')  # PNG is lossless, no quality knob
+                else:
+                    out_name = f"{file_id}-stripped.jpg"
+                    out_path = os.path.join(out_dir, out_name)
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    # quality=100 + subsampling=0 minimises pixel-level drift,
+                    # which matters if the image also carries an invisible watermark.
+                    img.save(out_path, 'JPEG', quality=100, subsampling=0)
+        finally:
+            try: os.remove(temp_in)
+            except Exception: pass
+
+        return jsonify({
+            'success': True,
+            'filename': out_name,
+            'download_url': f'/download/{file_id}/{out_name}',
+            'message': 'C2PA manifest removed (pixels preserved at near-lossless quality)',
+        }), 200
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/download/<file_id>/<filename>', methods=['GET'])
 def download_file(file_id, filename):
     """Download signed file"""

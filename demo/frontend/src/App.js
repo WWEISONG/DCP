@@ -121,6 +121,7 @@ function C2paPanel() {
   const [error, setError] = useState(null);
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [downloadName, setDownloadName] = useState(null);
+  const [downloadLabel, setDownloadLabel] = useState('Signed file');
   const [manifest, setManifest] = useState(null);
   const [hasC2pa, setHasC2pa] = useState(null);
   const [commonName, setCommonName] = useState('');
@@ -157,6 +158,7 @@ function C2paPanel() {
       });
       setDownloadUrl(resp.data.download_url);
       setDownloadName(resp.data.filename);
+      setDownloadLabel('Signed file');
 
       try {
         const signedResp = await axios.get(`${API_URL}${resp.data.download_url}`, {
@@ -206,6 +208,27 @@ function C2paPanel() {
       } else {
         setError(err.response?.data?.error || err.message);
       }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleStrip = async () => {
+    if (!file || busy) return;
+    setBusy('strip'); setError(null); setManifest(null); setHasC2pa(null);
+    setDownloadUrl(null); setDownloadName(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await axios.post(`${API_URL}/strip-c2pa-upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+      setDownloadUrl(resp.data.download_url);
+      setDownloadName(resp.data.filename);
+      setDownloadLabel('Unsigned file (signature removed)');
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.details || err.message);
     } finally {
       setBusy(null);
     }
@@ -276,6 +299,13 @@ function C2paPanel() {
         >
           {busy === 'verify' ? (<><span className="btn-spinner"></span>Verifying…</>) : 'Verify C2PA'}
         </button>
+        <button
+          className="feature-btn secondary"
+          onClick={handleStrip}
+          disabled={!file || !!busy}
+        >
+          {busy === 'strip' ? (<><span className="btn-spinner"></span>Removing…</>) : 'Remove signature'}
+        </button>
       </div>
 
       {error && <div className="feature-error">⚠ {error}</div>}
@@ -283,10 +313,10 @@ function C2paPanel() {
       {downloadUrl && (
         <div className="feature-result success">
           <div className="result-row">
-            <span>✅ Signed file ready: <code>{downloadName}</code></span>
+            <span>✅ {downloadLabel}: <code>{downloadName}</code></span>
           </div>
           <button className="feature-btn download" onClick={handleDownload}>
-            Download signed file
+            Download
           </button>
         </div>
       )}
