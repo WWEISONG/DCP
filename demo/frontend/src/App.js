@@ -1245,6 +1245,7 @@ function WatermarkTamperPanel() {
   const [downloadUrl, setDownloadUrl] = useState(null);
   const [downloadName, setDownloadName] = useState(null);
   const [tamperSummary, setTamperSummary] = useState(null);
+  const [noiseSigma, setNoiseSigma] = useState(10);
 
   const reset = () => {
     setFile(null); setPreview(null); setError(null);
@@ -1295,13 +1296,14 @@ function WatermarkTamperPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const runTamper = async (endpoint, mode) => {
+  const runTamper = async (endpoint, mode, extra = {}) => {
     if (!file || busy) return;
     clearOutputs();
     setBusy(mode);
     try {
       const fd = new FormData();
       fd.append('file', file);
+      Object.entries(extra).forEach(([k, v]) => fd.append(k, v));
       const resp = await axios.post(`${API_URL}${endpoint}`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 120000,
@@ -1316,7 +1318,7 @@ function WatermarkTamperPanel() {
     }
   };
 
-  const handleNoise = () => runTamper('/tamper-watermark-noise-upload', 'tamper-noise');
+  const handleNoise = () => runTamper('/tamper-watermark-noise-upload', 'tamper-noise', { sigma: noiseSigma });
   const handleRecompress = () => runTamper('/tamper-watermark-recompress-upload', 'tamper-recompress');
 
   const handleDownload = () => {
@@ -1360,10 +1362,24 @@ function WatermarkTamperPanel() {
           </div>
 
           <div className="tamper-mode-block">
-            <h3 className="tamper-mode-title">A. Add light Gaussian noise</h3>
+            <h3 className="tamper-mode-title">A. Add Gaussian noise</h3>
             <p className="tamper-mode-desc">
-              Add mild random noise to every pixel (σ=20). Visible grain but image stays clear. VINE is robust, so the watermark may still survive this attack — that's part of the story.
+              Add random noise to every pixel. Higher σ = more distortion. VINE is robust, so a mild attack may not destroy the watermark — that's part of the story.
             </p>
+            <div className="noise-sigma-row">
+              <label htmlFor="noise-sigma" className="noise-sigma-label">Noise level (σ)</label>
+              <input
+                id="noise-sigma"
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                value={noiseSigma}
+                onChange={(e) => setNoiseSigma(Math.max(1, Math.min(100, Number(e.target.value))))}
+                disabled={!!busy}
+                className="noise-sigma-input"
+              />
+            </div>
             <div className="feature-actions">
               <button
                 className="feature-btn primary"

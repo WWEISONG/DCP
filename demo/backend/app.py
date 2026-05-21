@@ -1961,10 +1961,11 @@ def tamper_watermark_noise_upload():
                     img = img.convert('RGB')
                 arr = np.array(img, dtype=np.float32)
 
-            # Very light additive Gaussian noise — barely perceptible grain,
-            # enough to show the concept of a noise attack without visibly
-            # degrading the image or destroying the watermark.
-            sigma = 4.0
+            try:
+                sigma = float(request.form.get('sigma', 10))
+                sigma = max(1.0, min(100.0, sigma))
+            except (TypeError, ValueError):
+                sigma = 10.0
             rng = np.random.default_rng(seed=0xC2BA)  # deterministic for demo
             noise = rng.normal(0.0, sigma, size=arr.shape).astype(np.float32)
             noisy = np.clip(arr + noise, 0, 255).astype(np.uint8)

@@ -1212,6 +1212,9 @@ a:hover { color: var(--color-accent-hover); }
 .tamper-mode-title { margin: 0; font-size: 1rem; font-weight: 700; color: #7a4321; }
 .tamper-mode-desc { margin: 0; font-size: 0.9rem; color: #8a553a; }
 .tamper-field-form { display: flex; flex-direction: column; gap: 8px; }
+.noise-sigma-row { display: flex; align-items: center; gap: 10px; }
+.noise-sigma-label { font-size: 0.9rem; color: #8a553a; white-space: nowrap; }
+.noise-sigma-input { width: 72px; padding: 4px 8px; border: 1px solid rgba(208,140,96,0.4); border-radius: var(--radius-sm); font-size: 0.9rem; background: var(--color-surface); color: var(--color-text); }
 
 @media (max-width: 600px) {
   .feature-actions { flex-direction: column; }
