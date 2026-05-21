@@ -265,7 +265,20 @@ def upload_file():
         
         client_input_path = os.path.join(client_input_dir, filename)
         try:
-            shutil.copy2(upload_path, client_input_path)
+            # Strip any existing C2PA manifest by re-encoding through PIL before
+            # handing the file to the Docker client. C2PA data lives in JPEG APP11
+            # segments / PNG ancillary chunks; PIL drops them on save, so the
+            # client always receives a clean image regardless of whether the user
+            # uploaded a previously-signed file.
+            from PIL import Image as _PIL_Image
+            src_mime = sniff_image_mime(upload_path) or 'image/jpeg'
+            with _PIL_Image.open(upload_path) as _img:
+                if src_mime == 'image/png':
+                    _img.save(client_input_path, 'PNG')
+                else:
+                    if _img.mode != 'RGB':
+                        _img = _img.convert('RGB')
+                    _img.save(client_input_path, 'JPEG', quality=100, subsampling=0)
         except PermissionError as e:
             return jsonify({
                 'error': 'Permission denied when copying file',

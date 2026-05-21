@@ -242,11 +242,6 @@ for file in args.files:
     output_file = os.path.join(args.output, signed_base_name)
     print(f"Signing file {file} and saving to {output_file}")
 
-    # Check if output file already exists
-    if os.path.exists(output_file):
-        print(f"Output file {output_file} already exists, skipping...")
-        continue
-
     try:
         # Detect the image format
         image_mime_type = get_image_mime_type(file)
