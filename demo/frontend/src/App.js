@@ -1502,76 +1502,6 @@ function GlobalNav() {
   );
 }
 
-function HeroArtwork() {
-  return (
-    <svg
-      className="hero-artwork"
-      viewBox="0 0 440 440"
-      role="img"
-      aria-label="A piece of safety content carrying an invisible ownership watermark and a C2PA authenticity seal"
-    >
-      <defs>
-        <linearGradient id="ha-bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#f5f3f0" />
-          <stop offset="1" stopColor="#e7efed" />
-        </linearGradient>
-        <linearGradient id="ha-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#cfe6e2" />
-          <stop offset="1" stopColor="#eef4f2" />
-        </linearGradient>
-        <linearGradient id="ha-seal" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#3d9b8f" />
-          <stop offset="1" stopColor="#338a7f" />
-        </linearGradient>
-        <pattern id="ha-wm" width="48" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(-18)">
-          <text x="0" y="18" fontFamily="'JetBrains Mono', monospace" fontSize="13" fill="#3d9b8f" opacity="0.12">DCP</text>
-        </pattern>
-        <clipPath id="ha-clip"><rect x="110" y="100" width="220" height="158" rx="10" /></clipPath>
-      </defs>
-
-      <rect x="20" y="20" width="400" height="400" rx="30" fill="url(#ha-bg)" />
-      <circle cx="362" cy="78" r="46" fill="#d08c60" opacity="0.12" />
-      <circle cx="74" cy="372" r="38" fill="#3d9b8f" opacity="0.12" />
-
-      <g transform="rotate(-5 220 210)">
-        <rect x="96" y="86" width="248" height="252" rx="18" fill="#ffffff" stroke="#dbd6d0" />
-        <g clipPath="url(#ha-clip)">
-          <rect x="110" y="100" width="220" height="158" fill="url(#ha-sky)" />
-          <circle cx="150" cy="138" r="15" fill="#e8c98a" />
-          <path d="M110 218 L190 194 L260 212 L330 190 L330 258 L110 258 Z" fill="#cdbfa9" />
-          <g transform="translate(214 198)">
-            <path d="M-26 8 a26 22 0 0 1 52 0 z" fill="#e0a23a" />
-            <rect x="-33" y="6" width="66" height="7" rx="3.5" fill="#cf8f2c" />
-            <rect x="-4" y="-12" width="8" height="16" rx="3" fill="#cf8f2c" />
-          </g>
-          <rect x="110" y="100" width="220" height="158" fill="url(#ha-wm)" />
-        </g>
-        <rect x="112" y="276" width="150" height="12" rx="6" fill="#e3ddd6" />
-        <rect x="112" y="300" width="98" height="10" rx="5" fill="#ece7e1" />
-      </g>
-
-      <g transform="translate(34 320)">
-        <rect width="166" height="46" rx="23" fill="#ffffff" stroke="#dbd6d0" />
-        <circle cx="25" cy="23" r="13" fill="#d08c60" opacity="0.16" />
-        <g stroke="#c07c50" strokeWidth="1.6" fill="none" strokeLinecap="round">
-          <path d="M20 23 a5 5 0 0 1 10 0" />
-          <path d="M17 23 a8 8 0 0 1 16 0" />
-        </g>
-        <text x="46" y="20" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="700" fill="#2c2c2e">Invisible watermark</text>
-        <text x="46" y="34" fontFamily="Inter, sans-serif" fontSize="10" fill="#6b6b70">Proves ownership</text>
-      </g>
-
-      <g transform="translate(250 286)">
-        <rect width="156" height="46" rx="23" fill="#ffffff" stroke="#dbd6d0" />
-        <circle cx="25" cy="23" r="14" fill="url(#ha-seal)" />
-        <path d="M19 23 l4 4 8 -9" stroke="#ffffff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <text x="48" y="20" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="700" fill="#2c2c2e">C2PA signed</text>
-        <text x="48" y="34" fontFamily="Inter, sans-serif" fontSize="10" fill="#6b6b70">Proves authenticity</text>
-      </g>
-    </svg>
-  );
-}
-
 function Hero() {
   return (
     <section id="top" className="hero bg-grid-fade">
@@ -1606,36 +1536,6 @@ function Hero() {
             </div>
           </div>
 
-          <div className="hero-graphic reveal">
-            <HeroArtwork />
-            <div className="hero-badge hero-badge--c2pa">
-              <span className="hero-badge-icon" aria-hidden="true">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </span>
-              C2PA signed
-            </div>
-            <div className="hero-badge hero-badge--wm">
-              <span className="hero-badge-icon" aria-hidden="true">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 4.21 16l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.4 1.65 1.65 0 0 0 4.27 6.58l-.06-.06A2 2 0 1 1 7.04 3.7l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .7.4 1.32 1.51 1.51H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
-              </span>
-              Watermarked
-            </div>
-            <div className="hero-badge hero-badge--tamper">
-              <span className="hero-badge-icon" aria-hidden="true">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              </span>
-              Tamper-aware
-            </div>
-          </div>
         </div>
 
         <div className="highlights-strip reveal">
