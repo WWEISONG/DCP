@@ -1740,94 +1740,6 @@ function DemoVideoStrip() {
   );
 }
 
-function WhyProtectSection() {
-  return (
-    <section id="why" className="section section--alt">
-      <div className="section-container">
-        <div className="section-header reveal">
-          <span className="section-eyebrow">Why it matters</span>
-          <h2 className="section-title">If you can't trust the image, you can't trust the decision.</h2>
-          <p className="section-lede">
-            HSE work depends on digital images — inspections, hazards, incidents, and
-            increasingly artificial-intelligence (AI) and augmented-reality (AR) safety
-            content. Every one drives a decision. DCP makes each image prove two
-            things: that it's authentic, and who owns it.
-          </p>
-        </div>
-
-        <div className="protect-flow reveal">
-          <div className="protect-col protect-col--risk">
-            <div className="protect-col-label">The risk</div>
-            <div className="threat-card">
-              <div className="protect-card-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="protect-card-title">Faked &amp; altered</h4>
-                <p className="protect-card-text">An edited hazard photo still looks official — so people trust it and act wrong.</p>
-              </div>
-            </div>
-            <div className="threat-card">
-              <div className="protect-card-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="protect-card-title">Copied untraceably</h4>
-                <p className="protect-card-text">Reused with no way to prove who made it or find the leak.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="protect-arrow" aria-hidden="true">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-            </svg>
-          </div>
-
-          <div className="protect-col protect-col--solution">
-            <div className="protect-col-label">DCP protects it</div>
-            <div className="solution-card">
-              <div className="protect-card-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="protect-card-title">Authentic → C2PA</h4>
-                <p className="protect-card-text">A cryptographic seal proves the file is the original. Any edit fails verification.</p>
-              </div>
-            </div>
-            <div className="solution-card">
-              <div className="protect-card-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12c3-4 6-4 9 0s6 4 9 0" /><path d="M3 17c3-4 6-4 9 0s6 4 9 0" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="protect-card-title">Owned → watermark</h4>
-                <p className="protect-card-text">A hidden mark survives re-uploads, proving who made it.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="protect-cta reveal">
-          <button className="cta cta-primary" onClick={() => scrollToId('demo')}>
-            Try it on an image
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function FeaturesSection() {
   return (
     <section id="features" className="section">
@@ -2429,7 +2341,6 @@ function App() {
     <div className="App">
       <GlobalNav />
       <Hero />
-      <WhyProtectSection />
       <DemoVideoStrip />
       <FeaturesSection />
       <HowItWorksSection />
