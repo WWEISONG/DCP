@@ -1567,21 +1567,21 @@ function DemoVideoStrip() {
       accent: 'health',
       poster: pillarPoster('#5e94c0', '#3a6a93', 'Health'),
       title: 'Health',
-      text: 'Occupational-health and exposure records — kept authentic for compliance and liability.',
+      text: 'Health records and medical scans — kept authentic for compliance and liability.',
     },
     {
       key: 'safety',
       accent: 'safety',
       poster: pillarPoster('#d2a648', '#b07f24', 'Safety'),
       title: 'Safety',
-      text: 'Site inspections, hazard reports and incident scenes — so safety decisions rest on real evidence.',
+      text: 'Inspection data and incident reports — so safety decisions rest on real evidence.',
     },
     {
       key: 'environment',
       accent: 'environment',
       poster: pillarPoster('#48a99b', '#2f8174', 'Environment'),
       title: 'Environment',
-      text: 'Spill, emissions and remediation imagery — provably unaltered for regulators.',
+      text: 'Site and aerial environmental imagery — provably unaltered for regulators.',
     },
   ];
 
@@ -1599,11 +1599,11 @@ function DemoVideoStrip() {
                 <video
                   className="video-window-video"
                   poster={c.poster}
-                  controls
+                  autoPlay
                   muted
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="auto"
                 >
                   <source
                     src={`${process.env.PUBLIC_URL}/videos/demo-${c.key}.mp4`}
