@@ -1580,17 +1580,19 @@ function Hero() {
           <div className="hero-text reveal">
             <div className="hero-eyebrow">
               <span className="hero-eyebrow-dot"></span>
-              Tech4HSE · CSIRO Data61 × UNSW
+              CSIRO Data61 × UNSW · supporting Tech4HSE
             </div>
             <h1 className="hero-title">
               Safety depends on<br />
               <span className="hero-title-accent">digital content you can trust.</span>
             </h1>
             <p className="hero-tagline">
-              From AR safety training to inspection and incident imagery, HSE runs on
-              digital media that's costly to create and dangerous if stolen or faked.
-              DCP locks in both: an <strong>invisible watermark</strong> proves who owns
-              it, and <strong>C2PA</strong> proves it hasn't been altered.
+              Health, Safety and Environment (HSE) work runs on digital media —
+              augmented-reality (AR) training, inspection and incident photos — where a
+              faked image can put workers at risk. The Digital Content Protector (DCP)
+              keeps it trustworthy: <strong>Content Credentials (C2PA)</strong> prove an
+              image is the unaltered original, and an <strong>invisible watermark</strong>
+              marks who created it.
             </p>
             <div className="hero-ctas">
               <button className="cta cta-primary" onClick={() => scrollToId('demo')}>
@@ -1748,11 +1750,14 @@ function WhyProtectSection() {
       <div className="section-container">
         <div className="section-header reveal">
           <span className="section-eyebrow">Why it matters</span>
-          <h2 className="section-title">Safety content is valuable — and vulnerable.</h2>
+          <h2 className="section-title">Safety content is only useful if you can trust it.</h2>
           <p className="section-lede">
-            HSE teams produce expensive, safety-critical media — AR training, hazard
-            datasets, inspection and incident imagery. Once it's digital it can be
-            copied, passed off, or quietly edited. DCP closes both gaps at once.
+            HSE teams increasingly rely on artificial-intelligence (AI) and
+            augmented-reality (AR) safety content, plus inspection and incident
+            imagery. If any of it is faked
+            or altered, people act on the wrong information — so authenticity comes
+            first. DCP proves a file is the genuine, unaltered original, and marks who
+            created it.
           </p>
         </div>
 
@@ -1762,23 +1767,23 @@ function WhyProtectSection() {
             <div className="threat-card">
               <div className="protect-card-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="protect-card-title">Stolen &amp; misused</h4>
-                <p className="protect-card-text">Training and inspection media gets copied and reused with no credit, control, or way to trace the leak.</p>
-              </div>
-            </div>
-            <div className="threat-card">
-              <div className="protect-card-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
               </div>
               <div>
                 <h4 className="protect-card-title">Faked &amp; altered</h4>
                 <p className="protect-card-text">A doctored hazard or procedure image still looks official — and sends workers the wrong information.</p>
+              </div>
+            </div>
+            <div className="threat-card">
+              <div className="protect-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="protect-card-title">Copied with no trace</h4>
+                <p className="protect-card-text">Training and inspection media gets reused with no way to prove who made it or trace where a leak came from.</p>
               </div>
             </div>
           </div>
@@ -1794,23 +1799,23 @@ function WhyProtectSection() {
             <div className="solution-card">
               <div className="protect-card-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12c3-4 6-4 9 0s6 4 9 0" /><path d="M3 17c3-4 6-4 9 0s6 4 9 0" />
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" />
                 </svg>
               </div>
               <div>
-                <h4 className="protect-card-title">Invisible watermark → ownership</h4>
-                <p className="protect-card-text">An imperceptible mark survives downloads and re-uploads, so you can always prove who created the content and trace misuse.</p>
+                <h4 className="protect-card-title">Authenticity → Content Credentials (C2PA)</h4>
+                <p className="protect-card-text">A cryptographic seal proves the file is the official, unaltered version — and any tampering shows up instantly on verification.</p>
               </div>
             </div>
             <div className="solution-card">
               <div className="protect-card-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" />
+                  <path d="M3 12c3-4 6-4 9 0s6 4 9 0" /><path d="M3 17c3-4 6-4 9 0s6 4 9 0" />
                 </svg>
               </div>
               <div>
-                <h4 className="protect-card-title">C2PA → authenticity</h4>
-                <p className="protect-card-text">A cryptographic seal proves the file is the official, unaltered version — and any tampering shows up instantly on verification.</p>
+                <h4 className="protect-card-title">Ownership → invisible watermark</h4>
+                <p className="protect-card-text">An imperceptible mark survives downloads and re-uploads, so you can prove who created the content and trace misuse.</p>
               </div>
             </div>
           </div>
@@ -2172,8 +2177,8 @@ function DocsSection() {
 function UseCasesSection() {
   const cases = [
     {
-      title: 'Workplace safety records (Tech4HSE)',
-      text: 'Prove incident photos, equipment inspections and PPE-compliance shots are authentic and unaltered, so safety decisions rest on real evidence.',
+      title: 'Workplace safety records',
+      text: 'Prove incident photos, equipment inspections and protective-equipment compliance shots are authentic and unaltered, so safety decisions rest on real evidence.',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -2243,9 +2248,9 @@ function UseCasesSection() {
           <h2 className="section-title">Built for anywhere images need to be trusted — starting with the worksite.</h2>
           <p className="section-lede">
             Provenance + watermarking is a foundational trust layer for any setting
-            where imagery drives decisions — from Tech4HSE worksites to newsrooms
-            and AI platforms. It complements existing CMS, DAM and platform tooling,
-            not replaces it.
+            where imagery drives decisions — from safety-critical worksites to
+            newsrooms and AI platforms. It complements existing content and
+            asset-management tools, not replaces them.
           </p>
         </div>
 
@@ -2340,12 +2345,13 @@ function TeamSection() {
       <div className="section-container">
         <div className="section-header reveal">
           <span className="section-eyebrow">Team</span>
-          <h2 className="section-title">A CSIRO Data61 × UNSW collaboration, contributing to Tech4HSE.</h2>
+          <h2 className="section-title">A CSIRO Data61 × UNSW collaboration, supporting Tech4HSE.</h2>
           <p className="section-lede">
-            DCP is the trustworthy-media (cybersecurity) strand of Tech4HSE —
-            CSIRO Data61’s program for safer workplaces — built by researchers
-            working across content provenance, program analysis, neural media
-            security and responsible-AI tooling.
+            The Digital Content Protector contributes a trustworthy-media capability
+            toward the responsible-AI and cybersecurity goals of Tech4HSE — CSIRO
+            Data61’s program for safer workplaces — built by researchers working
+            across content provenance, program analysis, neural media security and
+            responsible-AI tooling.
           </p>
         </div>
 
@@ -2354,8 +2360,9 @@ function TeamSection() {
           <img src={data61Logo} alt="Data61 Logo" className="partners-logo" />
         </div>
         <p className="partners-note reveal">
-          Part of <strong>Tech4HSE</strong> — CSIRO Data61’s research program
-          developing AI, AR and cybersecurity for safer workplaces.
+          Supporting <strong>Tech4HSE</strong> — CSIRO Data61’s research program
+          developing artificial intelligence (AI), augmented reality (AR) and
+          cybersecurity for safer workplaces.
         </p>
 
         <div className="team-grid">
@@ -2389,8 +2396,9 @@ function Footer() {
               Digital Content Protector
             </div>
             <p className="footer-tagline">
-              C2PA-grade provenance and invisible neural watermarking, in one
-              open research stack — the trustworthy-media strand of Tech4HSE.
+              Content Credentials (C2PA) provenance and invisible neural
+              watermarking in one open research stack — supporting Tech4HSE’s
+              responsible-AI and cybersecurity goals.
             </p>
           </div>
           <div>
@@ -2415,7 +2423,7 @@ function Footer() {
         </div>
         <div className="footer-bottom">
           <span>© UNSW CSE FutureAI 2026 — Digital Content Protector</span>
-          <span>Part of Tech4HSE · CSIRO Data61 × UNSW · Built on C2PA &amp; neural watermarking</span>
+          <span>Supporting Tech4HSE · CSIRO Data61 × UNSW · Built on C2PA &amp; neural watermarking</span>
         </div>
       </div>
     </footer>
