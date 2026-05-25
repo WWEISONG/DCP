@@ -1583,16 +1583,16 @@ function Hero() {
               CSIRO Data61 × UNSW · supporting Tech4HSE
             </div>
             <h1 className="hero-title">
-              Safety depends on<br />
-              <span className="hero-title-accent">digital content you can trust.</span>
+              Safety runs on images.<br />
+              <span className="hero-title-accent">Make every one provable.</span>
             </h1>
             <p className="hero-tagline">
-              Health, Safety and Environment (HSE) work runs on digital media —
-              augmented-reality (AR) training, inspection and incident photos — where a
-              faked image can put workers at risk. The Digital Content Protector (DCP)
-              keeps it trustworthy: <strong>Content Credentials (C2PA)</strong> prove an
-              image is the unaltered original, and an <strong>invisible watermark</strong>
-              marks who created it.
+              Health, Safety and Environment (HSE) teams act on what an image shows —
+              an inspection, a hazard, an incident. Fake or edit that image and the
+              decision goes wrong; on a worksite, people get hurt. The Digital Content
+              Protector (DCP) makes every image provable: <strong>Content Credentials
+              (C2PA)</strong> prove it hasn't been altered, and an <strong>invisible
+              watermark</strong> proves who made it.
             </p>
             <div className="hero-ctas">
               <button className="cta cta-primary" onClick={() => scrollToId('demo')}>
@@ -1750,14 +1750,12 @@ function WhyProtectSection() {
       <div className="section-container">
         <div className="section-header reveal">
           <span className="section-eyebrow">Why it matters</span>
-          <h2 className="section-title">Safety content is only useful if you can trust it.</h2>
+          <h2 className="section-title">If you can't trust the image, you can't trust the decision.</h2>
           <p className="section-lede">
-            HSE teams increasingly rely on artificial-intelligence (AI) and
-            augmented-reality (AR) safety content, plus inspection and incident
-            imagery. If any of it is faked
-            or altered, people act on the wrong information — so authenticity comes
-            first. DCP proves a file is the genuine, unaltered original, and marks who
-            created it.
+            HSE work depends on digital images — inspections, hazards, incidents, and
+            increasingly artificial-intelligence (AI) and augmented-reality (AR) safety
+            content. Every one drives a decision. DCP makes each image prove two
+            things: that it's authentic, and who owns it.
           </p>
         </div>
 
@@ -1772,7 +1770,7 @@ function WhyProtectSection() {
               </div>
               <div>
                 <h4 className="protect-card-title">Faked &amp; altered</h4>
-                <p className="protect-card-text">A doctored hazard or procedure image still looks official — and sends workers the wrong information.</p>
+                <p className="protect-card-text">An edited hazard photo still looks official — so people trust it and act wrong.</p>
               </div>
             </div>
             <div className="threat-card">
@@ -1782,8 +1780,8 @@ function WhyProtectSection() {
                 </svg>
               </div>
               <div>
-                <h4 className="protect-card-title">Copied with no trace</h4>
-                <p className="protect-card-text">Training and inspection media gets reused with no way to prove who made it or trace where a leak came from.</p>
+                <h4 className="protect-card-title">Copied untraceably</h4>
+                <p className="protect-card-text">Reused with no way to prove who made it or find the leak.</p>
               </div>
             </div>
           </div>
@@ -1803,8 +1801,8 @@ function WhyProtectSection() {
                 </svg>
               </div>
               <div>
-                <h4 className="protect-card-title">Authenticity → Content Credentials (C2PA)</h4>
-                <p className="protect-card-text">A cryptographic seal proves the file is the official, unaltered version — and any tampering shows up instantly on verification.</p>
+                <h4 className="protect-card-title">Authentic → C2PA</h4>
+                <p className="protect-card-text">A cryptographic seal proves the file is the original. Any edit fails verification.</p>
               </div>
             </div>
             <div className="solution-card">
@@ -1814,8 +1812,8 @@ function WhyProtectSection() {
                 </svg>
               </div>
               <div>
-                <h4 className="protect-card-title">Ownership → invisible watermark</h4>
-                <p className="protect-card-text">An imperceptible mark survives downloads and re-uploads, so you can prove who created the content and trace misuse.</p>
+                <h4 className="protect-card-title">Owned → watermark</h4>
+                <p className="protect-card-text">A hidden mark survives re-uploads, proving who made it.</p>
               </div>
             </div>
           </div>
@@ -2245,12 +2243,11 @@ function UseCasesSection() {
       <div className="section-container">
         <div className="section-header reveal">
           <span className="section-eyebrow">Use cases</span>
-          <h2 className="section-title">Built for anywhere images need to be trusted — starting with the worksite.</h2>
+          <h2 className="section-title">Wherever images drive decisions — starting with the worksite.</h2>
           <p className="section-lede">
-            Provenance + watermarking is a foundational trust layer for any setting
-            where imagery drives decisions — from safety-critical worksites to
-            newsrooms and AI platforms. It complements existing content and
-            asset-management tools, not replaces them.
+            If a decision depends on an image, that image needs to be provable.
+            DCP adds that proof — on the worksite first, and anywhere else images
+            have to be trusted.
           </p>
         </div>
 
