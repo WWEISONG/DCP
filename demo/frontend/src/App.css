@@ -298,7 +298,7 @@ a:hover { color: var(--color-accent-hover); }
 .hero-tagline {
   font-size: 1.18rem;
   color: var(--color-text-secondary);
-  max-width: 540px;
+  max-width: none;
   margin-bottom: 32px;
 }
 
