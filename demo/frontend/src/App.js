@@ -1578,10 +1578,6 @@ function Hero() {
       <div className="section-container">
         <div className="hero-inner">
           <div className="hero-text reveal">
-            <div className="hero-eyebrow">
-              <span className="hero-eyebrow-dot"></span>
-              CSIRO Data61 × UNSW · supporting Tech4HSE
-            </div>
             <h1 className="hero-title">
               Safety runs on images.<br />
               <span className="hero-title-accent">Make every one provable.</span>
