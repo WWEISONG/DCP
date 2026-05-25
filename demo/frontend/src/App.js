@@ -1510,16 +1510,17 @@ function Hero() {
           <div className="hero-text reveal">
             <div className="hero-eyebrow">
               <span className="hero-eyebrow-dot"></span>
-              Content authenticity, end-to-end
+              Tech4HSE · CSIRO Data61 × UNSW
             </div>
             <h1 className="hero-title">
               Prove what's real.<br />
-              <span className="hero-title-accent">Protect what's yours.</span>
+              <span className="hero-title-accent">Protect what keeps people safe.</span>
             </h1>
             <p className="hero-tagline">
-              DCP combines C2PA cryptographic provenance with invisible neural watermarking,
-              so every image you publish carries verifiable proof — and resists tampering even
-              after it leaves your hands.
+              DCP is the content-integrity layer for Tech4HSE — combining C2PA
+              cryptographic provenance with invisible neural watermarking so the
+              imagery behind workplace health, safety and environment decisions can
+              be proven authentic, and any tampering is caught.
             </p>
             <div className="hero-ctas">
               <button className="cta cta-primary" onClick={() => scrollToId('demo')}>
@@ -1584,6 +1585,70 @@ function Hero() {
             <span className="highlights-strip-value">Open</span>
             <span className="highlights-strip-label">Built on open standards</span>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DemoVideoStrip() {
+  // Three windows under the hero, one per HSE pillar — each shows a workplace
+  // scenario where digital imagery must be trusted (the problem DCP protects
+  // against). Drop the clips into `public/videos/` as demo-health.mp4,
+  // demo-safety.mp4 and demo-environment.mp4; until then the poster renders.
+  const clips = [
+    {
+      key: 'health',
+      accent: 'health',
+      title: 'Health',
+      text: 'Occupational-health and exposure records — kept authentic for compliance and liability.',
+    },
+    {
+      key: 'safety',
+      accent: 'safety',
+      title: 'Safety',
+      text: 'Site inspections, hazard reports and incident scenes — so safety decisions rest on real evidence.',
+    },
+    {
+      key: 'environment',
+      accent: 'environment',
+      title: 'Environment',
+      text: 'Spill, emissions and remediation imagery — provably unaltered for regulators.',
+    },
+  ];
+
+  return (
+    <section className="video-strip-section" aria-label="Health, Safety and Environment use cases">
+      <div className="section-container">
+        <div className="video-strip-header reveal">
+          <span className="section-eyebrow">Where it matters</span>
+          <h2 className="video-strip-title">Protecting the evidence behind Health, Safety &amp; Environment.</h2>
+        </div>
+        <div className="video-strip-grid">
+          {clips.map((c) => (
+            <figure className="video-window reveal" key={c.key}>
+              <div className={`video-window-media video-window-media--${c.accent}`}>
+                <video
+                  className="video-window-video"
+                  poster={fuBaoImage}
+                  controls
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                >
+                  <source
+                    src={`${process.env.PUBLIC_URL}/videos/demo-${c.key}.mp4`}
+                    type="video/mp4"
+                  />
+                </video>
+              </div>
+              <figcaption className="video-window-caption">
+                <span className="video-window-title">{c.title}</span>
+                <span className="video-window-text">{c.text}</span>
+              </figcaption>
+            </figure>
+          ))}
         </div>
       </div>
     </section>
@@ -1933,6 +1998,26 @@ function DocsSection() {
 function UseCasesSection() {
   const cases = [
     {
+      title: 'Workplace safety records (Tech4HSE)',
+      text: 'Prove incident photos, equipment inspections and PPE-compliance shots are authentic and unaltered, so safety decisions rest on real evidence.',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      ),
+    },
+    {
+      title: 'Environmental compliance',
+      text: 'Bind spill, emissions and before/after remediation imagery to its source so regulatory evidence can’t be quietly doctored.',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
+          <path d="M2 21c0-3 1.85-5.36 5.08-6" />
+        </svg>
+      ),
+    },
+    {
       title: 'Journalism & newsrooms',
       text: 'Stamp every press photo at the moment of capture so an editor downstream can prove the image is original.',
       icon: (
@@ -1981,10 +2066,12 @@ function UseCasesSection() {
       <div className="section-container">
         <div className="section-header reveal">
           <span className="section-eyebrow">Use cases</span>
-          <h2 className="section-title">Built for anywhere images need to be trusted.</h2>
+          <h2 className="section-title">Built for anywhere images need to be trusted — starting with the worksite.</h2>
           <p className="section-lede">
-            Provenance + watermarking is a foundational layer that complements
-            existing CMS, DAM and platform tooling — not a replacement.
+            Provenance + watermarking is a foundational trust layer for any setting
+            where imagery drives decisions — from Tech4HSE worksites to newsrooms
+            and AI platforms. It complements existing CMS, DAM and platform tooling,
+            not replaces it.
           </p>
         </div>
 
@@ -2079,10 +2166,12 @@ function TeamSection() {
       <div className="section-container">
         <div className="section-header reveal">
           <span className="section-eyebrow">Team</span>
-          <h2 className="section-title">A collaboration between UNSW CSE and CSIRO Data61.</h2>
+          <h2 className="section-title">A CSIRO Data61 × UNSW collaboration, contributing to Tech4HSE.</h2>
           <p className="section-lede">
-            DCP is built by researchers working across content provenance,
-            program analysis, neural media security and responsible-AI tooling.
+            DCP is the trustworthy-media (cybersecurity) strand of Tech4HSE —
+            CSIRO Data61’s program for safer workplaces — built by researchers
+            working across content provenance, program analysis, neural media
+            security and responsible-AI tooling.
           </p>
         </div>
 
@@ -2090,6 +2179,10 @@ function TeamSection() {
           <img src={unswLogo}   alt="UNSW Logo"   className="partners-logo" />
           <img src={data61Logo} alt="Data61 Logo" className="partners-logo" />
         </div>
+        <p className="partners-note reveal">
+          Part of <strong>Tech4HSE</strong> — CSIRO Data61’s research program
+          developing AI, AR and cybersecurity for safer workplaces.
+        </p>
 
         <div className="team-grid">
           {members.map((m) => (
@@ -2123,7 +2216,7 @@ function Footer() {
             </div>
             <p className="footer-tagline">
               C2PA-grade provenance and invisible neural watermarking, in one
-              open research stack.
+              open research stack — the trustworthy-media strand of Tech4HSE.
             </p>
           </div>
           <div>
@@ -2148,7 +2241,7 @@ function Footer() {
         </div>
         <div className="footer-bottom">
           <span>© UNSW CSE FutureAI 2026 — Digital Content Protector</span>
-          <span>Built on C2PA · Neural watermarking · open infrastructure</span>
+          <span>Part of Tech4HSE · CSIRO Data61 × UNSW · Built on C2PA &amp; neural watermarking</span>
         </div>
       </div>
     </footer>
@@ -2161,6 +2254,7 @@ function App() {
     <div className="App">
       <GlobalNav />
       <Hero />
+      <DemoVideoStrip />
       <FeaturesSection />
       <HowItWorksSection />
       <DocsSection />

@@ -435,6 +435,86 @@ a:hover { color: var(--color-accent-hover); }
 }
 
 /* ============================================================
+   Demo video strip (under the hero)
+   ============================================================ */
+
+.video-strip-section {
+  padding: 56px 0 8px;
+  background: var(--color-bg);
+}
+
+.video-strip-header {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 36px;
+}
+
+.video-strip-title {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 4px;
+}
+
+.video-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .video-strip-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+}
+
+.video-window {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.video-window-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-top-width: 3px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.video-window-media--health      { border-top-color: var(--color-info); }
+.video-window-media--safety      { border-top-color: var(--color-warning); }
+.video-window-media--environment { border-top-color: var(--color-accent); }
+
+.video-window-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+.video-window-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.video-window-title {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.video-window-text {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+/* ============================================================
    Section common
    ============================================================ */
 
@@ -662,6 +742,15 @@ a:hover { color: var(--color-accent-hover); }
   opacity: 0.85;
   filter: saturate(0.85);
 }
+
+.partners-note {
+  text-align: center;
+  max-width: 560px;
+  margin: -32px auto 56px;
+  font-size: 0.92rem;
+  color: var(--color-text-secondary);
+}
+.partners-note strong { color: var(--color-accent); }
 
 .team-grid {
   display: grid;
