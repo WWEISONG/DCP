@@ -2564,4 +2564,4 @@ if __name__ == '__main__':
     if port != 8000:
         print(f"WARNING: Using port {port} instead of 8000.")
         print(f"Update your frontend to connect to http://localhost:{port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)

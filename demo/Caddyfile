@@ -1,0 +1,31 @@
+# DCP reverse proxy — keeps everything on one server but stops single-threaded
+# Flask from being hammered by page-view traffic.
+#
+# Architecture:
+#   cloudflared  ->  Caddy :8080  ->  static files from build/   (most traffic)
+#                                 \-> Flask :8000 for API calls   (sign/watermark)
+#
+# Point the tunnel at Caddy, NOT Flask:
+#   cloudflared tunnel --url http://localhost:8080
+#
+# The frontend uses same-origin (relative) API URLs, so no rebuild or CORS is
+# needed — Caddy and Flask look like one origin to the browser.
+
+:8080 {
+	root * /mnt/data3/weisong/DCP/demo/frontend/build
+	encode gzip zstd
+
+	# Built static assets (JS, CSS, images, the videos) are served directly by
+	# Caddy — it handles thousands of concurrent static requests with almost no
+	# resources, so the ML backend never sees page-view traffic.
+	@static file
+	handle @static {
+		header Cache-Control "public, max-age=3600"
+		file_server
+	}
+
+	# Everything else (the API endpoints + the SPA index.html) goes to Flask.
+	handle {
+		reverse_proxy localhost:8000
+	}
+}
