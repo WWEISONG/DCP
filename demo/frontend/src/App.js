@@ -1537,25 +1537,6 @@ function Hero() {
           </div>
 
         </div>
-
-        <div className="highlights-strip reveal">
-          <div className="highlights-strip-item">
-            <span className="highlights-strip-value">C2PA 2.0</span>
-            <span className="highlights-strip-label">Coalition-grade provenance</span>
-          </div>
-          <div className="highlights-strip-item">
-            <span className="highlights-strip-value">Invisible Watermark</span>
-            <span className="highlights-strip-label">Neural pixel-level watermarks</span>
-          </div>
-          <div className="highlights-strip-item">
-            <span className="highlights-strip-value">Tamper-evident</span>
-            <span className="highlights-strip-label">Cryptographic signatures detect any edit</span>
-          </div>
-          <div className="highlights-strip-item">
-            <span className="highlights-strip-value">Open</span>
-            <span className="highlights-strip-label">Built on open standards</span>
-          </div>
-        </div>
       </div>
     </section>
   );
@@ -1636,6 +1617,25 @@ function DemoVideoStrip() {
               </figcaption>
             </figure>
           ))}
+        </div>
+
+        <div className="highlights-strip reveal">
+          <div className="highlights-strip-item">
+            <span className="highlights-strip-value">C2PA 2.0</span>
+            <span className="highlights-strip-label">Coalition-grade provenance</span>
+          </div>
+          <div className="highlights-strip-item">
+            <span className="highlights-strip-value">Invisible Watermark</span>
+            <span className="highlights-strip-label">Neural pixel-level watermarks</span>
+          </div>
+          <div className="highlights-strip-item">
+            <span className="highlights-strip-value">Tamper-evident</span>
+            <span className="highlights-strip-label">Cryptographic signatures detect any edit</span>
+          </div>
+          <div className="highlights-strip-item">
+            <span className="highlights-strip-value">Open</span>
+            <span className="highlights-strip-label">Built on open standards</span>
+          </div>
         </div>
       </div>
     </section>
