@@ -1583,16 +1583,14 @@ function Hero() {
               <span className="hero-title-accent">Make every one provable.</span>
             </h1>
             <p className="hero-tagline">
-              Health, Safety and Environment (HSE) teams rely on site images to
-              document inspections, hazards, incidents, and compliance activities.
-              These images often become part of internal reports, audit records,
-              insurance claims, and regulatory evidence. However, once shared across
-              contractors, platforms, and reporting systems, their ownership and
-              integrity can become difficult to verify. The Digital Content Protector
-              (DCP) addresses this gap by embedding invisible copyright watermarks and
-              attaching Content Credentials (C2PA), allowing organisations to prove who
-              created an image, verify whether it has been modified, and maintain
-              trusted visual records throughout the HSE workflow.
+              Health, Safety and Environment (HSE) teams document inspections, hazards
+              and incidents with site images that end up in reports, audits, insurance
+              claims and regulatory evidence. Once shared across contractors and
+              systems, their ownership and integrity get hard to verify. The Digital
+              Content Protector (DCP) embeds invisible copyright watermarks and attaches
+              Content Credentials (C2PA), so organisations can prove who created an
+              image, confirm it hasn't been modified, and keep trusted visual records
+              across the HSE workflow.
             </p>
             <div className="hero-ctas">
               <button className="cta cta-primary" onClick={() => scrollToId('demo')}>

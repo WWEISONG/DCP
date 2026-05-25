@@ -235,7 +235,7 @@ a:hover { color: var(--color-accent-hover); }
    ============================================================ */
 
 .hero {
-  padding: 96px 0 80px;
+  padding: 48px 0 64px;
   background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%);
   border-bottom: 1px solid var(--color-border-subtle);
 }
@@ -249,7 +249,7 @@ a:hover { color: var(--color-accent-hover); }
 
 @media (max-width: 900px) {
   .hero-inner { grid-template-columns: 1fr; gap: 40px; }
-  .hero { padding: 60px 0 56px; }
+  .hero { padding: 36px 0 48px; }
 }
 
 .hero-eyebrow {
