@@ -448,7 +448,7 @@ a:hover { color: var(--color-accent-hover); }
    ============================================================ */
 
 .video-strip-section {
-  padding: 56px 0 8px;
+  padding: 32px 0 8px;
   background: var(--color-bg);
 }
 
@@ -528,7 +528,7 @@ a:hover { color: var(--color-accent-hover); }
    ============================================================ */
 
 .section {
-  padding: 88px 0;
+  padding: 56px 0;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
@@ -539,7 +539,7 @@ a:hover { color: var(--color-accent-hover); }
 .section-header {
   text-align: center;
   max-width: 720px;
-  margin: 0 auto 56px;
+  margin: 0 auto 40px;
 }
 
 .section-eyebrow {
@@ -565,7 +565,7 @@ a:hover { color: var(--color-accent-hover); }
 }
 
 @media (max-width: 720px) {
-  .section { padding: 64px 0; }
+  .section { padding: 40px 0; }
   .section-header { margin-bottom: 40px; }
 }
 
@@ -820,7 +820,7 @@ a:hover { color: var(--color-accent-hover); }
    ============================================================ */
 
 .demo-section {
-  padding: 88px 0;
+  padding: 56px 0;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border-subtle);
 }
