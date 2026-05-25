@@ -3,10 +3,7 @@ import './App.css';
 import axios from 'axios';
 import unswLogo from './assets/UNSW_logo.png';
 import data61Logo from './assets/data61-logo.png';
-import heroHse from './assets/hero-hse.jpg';
-import hseHealth from './assets/hse-health.jpg';
-import hseSafety from './assets/hse-safety.jpg';
-import hseEnvironment from './assets/hse-environment.jpg';
+import exampleSite from './assets/hse-safety.jpg';
 import teamWeiSong from './assets/team_weisong.jpg';
 import teamYuleiSui from './assets/team_yuleisui.jpg';
 import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
@@ -64,7 +61,7 @@ function FileDropZone({ panelId, file, preview, onFile, onClear, disabled }) {
     e.target.value = '';
   };
   const loadExample = async () => {
-    const resp = await fetch(heroHse);
+    const resp = await fetch(exampleSite);
     const blob = await resp.blob();
     onFile(new File([blob], 'example-site.jpg', { type: blob.type || 'image/jpeg' }));
   };
@@ -1505,6 +1502,76 @@ function GlobalNav() {
   );
 }
 
+function HeroArtwork() {
+  return (
+    <svg
+      className="hero-artwork"
+      viewBox="0 0 440 440"
+      role="img"
+      aria-label="A piece of safety content carrying an invisible ownership watermark and a C2PA authenticity seal"
+    >
+      <defs>
+        <linearGradient id="ha-bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f5f3f0" />
+          <stop offset="1" stopColor="#e7efed" />
+        </linearGradient>
+        <linearGradient id="ha-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#cfe6e2" />
+          <stop offset="1" stopColor="#eef4f2" />
+        </linearGradient>
+        <linearGradient id="ha-seal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#3d9b8f" />
+          <stop offset="1" stopColor="#338a7f" />
+        </linearGradient>
+        <pattern id="ha-wm" width="48" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(-18)">
+          <text x="0" y="18" fontFamily="'JetBrains Mono', monospace" fontSize="13" fill="#3d9b8f" opacity="0.12">DCP</text>
+        </pattern>
+        <clipPath id="ha-clip"><rect x="110" y="100" width="220" height="158" rx="10" /></clipPath>
+      </defs>
+
+      <rect x="20" y="20" width="400" height="400" rx="30" fill="url(#ha-bg)" />
+      <circle cx="362" cy="78" r="46" fill="#d08c60" opacity="0.12" />
+      <circle cx="74" cy="372" r="38" fill="#3d9b8f" opacity="0.12" />
+
+      <g transform="rotate(-5 220 210)">
+        <rect x="96" y="86" width="248" height="252" rx="18" fill="#ffffff" stroke="#dbd6d0" />
+        <g clipPath="url(#ha-clip)">
+          <rect x="110" y="100" width="220" height="158" fill="url(#ha-sky)" />
+          <circle cx="150" cy="138" r="15" fill="#e8c98a" />
+          <path d="M110 218 L190 194 L260 212 L330 190 L330 258 L110 258 Z" fill="#cdbfa9" />
+          <g transform="translate(214 198)">
+            <path d="M-26 8 a26 22 0 0 1 52 0 z" fill="#e0a23a" />
+            <rect x="-33" y="6" width="66" height="7" rx="3.5" fill="#cf8f2c" />
+            <rect x="-4" y="-12" width="8" height="16" rx="3" fill="#cf8f2c" />
+          </g>
+          <rect x="110" y="100" width="220" height="158" fill="url(#ha-wm)" />
+        </g>
+        <rect x="112" y="276" width="150" height="12" rx="6" fill="#e3ddd6" />
+        <rect x="112" y="300" width="98" height="10" rx="5" fill="#ece7e1" />
+      </g>
+
+      <g transform="translate(34 320)">
+        <rect width="166" height="46" rx="23" fill="#ffffff" stroke="#dbd6d0" />
+        <circle cx="25" cy="23" r="13" fill="#d08c60" opacity="0.16" />
+        <g stroke="#c07c50" strokeWidth="1.6" fill="none" strokeLinecap="round">
+          <path d="M20 23 a5 5 0 0 1 10 0" />
+          <path d="M17 23 a8 8 0 0 1 16 0" />
+        </g>
+        <text x="46" y="20" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="700" fill="#2c2c2e">Invisible watermark</text>
+        <text x="46" y="34" fontFamily="Inter, sans-serif" fontSize="10" fill="#6b6b70">Proves ownership</text>
+      </g>
+
+      <g transform="translate(250 286)">
+        <rect width="156" height="46" rx="23" fill="#ffffff" stroke="#dbd6d0" />
+        <circle cx="25" cy="23" r="14" fill="url(#ha-seal)" />
+        <path d="M19 23 l4 4 8 -9" stroke="#ffffff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="48" y="20" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="700" fill="#2c2c2e">C2PA signed</text>
+        <text x="48" y="34" fontFamily="Inter, sans-serif" fontSize="10" fill="#6b6b70">Proves authenticity</text>
+      </g>
+    </svg>
+  );
+}
+
 function Hero() {
   return (
     <section id="top" className="hero bg-grid-fade">
@@ -1516,14 +1583,14 @@ function Hero() {
               Tech4HSE · CSIRO Data61 × UNSW
             </div>
             <h1 className="hero-title">
-              Prove what's real.<br />
-              <span className="hero-title-accent">Protect what keeps people safe.</span>
+              Safety depends on<br />
+              <span className="hero-title-accent">digital content you can trust.</span>
             </h1>
             <p className="hero-tagline">
-              DCP is the content-integrity layer for Tech4HSE — combining C2PA
-              cryptographic provenance with invisible neural watermarking so the
-              imagery behind workplace health, safety and environment decisions can
-              be proven authentic, and any tampering is caught.
+              From AR safety training to inspection and incident imagery, HSE runs on
+              digital media that's costly to create and dangerous if stolen or faked.
+              DCP locks in both: an <strong>invisible watermark</strong> proves who owns
+              it, and <strong>C2PA</strong> proves it hasn't been altered.
             </p>
             <div className="hero-ctas">
               <button className="cta cta-primary" onClick={() => scrollToId('demo')}>
@@ -1540,7 +1607,7 @@ function Hero() {
           </div>
 
           <div className="hero-graphic reveal">
-            <img src={heroHse} alt="Worker in full protective gear on a worksite — imagery protected by DCP" className="hero-graphic-img" />
+            <HeroArtwork />
             <div className="hero-badge hero-badge--c2pa">
               <span className="hero-badge-icon" aria-hidden="true">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -1594,6 +1661,20 @@ function Hero() {
   );
 }
 
+function pillarPoster(c1, c2, label) {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270">' +
+    '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+    `<stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/>` +
+    '</linearGradient></defs>' +
+    '<rect width="480" height="270" fill="url(#g)"/>' +
+    '<circle cx="240" cy="118" r="38" fill="rgba(255,255,255,0.18)"/>' +
+    '<path d="M229 100 v36 l30 -18 z" fill="rgba(255,255,255,0.92)"/>' +
+    `<text x="28" y="240" font-family="Inter,Arial,sans-serif" font-size="26" font-weight="700" fill="rgba(255,255,255,0.96)">${label}</text>` +
+    '</svg>';
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 function DemoVideoStrip() {
   // Three windows under the hero, one per HSE pillar — each shows a workplace
   // scenario where digital imagery must be trusted (the problem DCP protects
@@ -1603,21 +1684,21 @@ function DemoVideoStrip() {
     {
       key: 'health',
       accent: 'health',
-      poster: hseHealth,
+      poster: pillarPoster('#5e94c0', '#3a6a93', 'Health'),
       title: 'Health',
       text: 'Occupational-health and exposure records — kept authentic for compliance and liability.',
     },
     {
       key: 'safety',
       accent: 'safety',
-      poster: hseSafety,
+      poster: pillarPoster('#d2a648', '#b07f24', 'Safety'),
       title: 'Safety',
       text: 'Site inspections, hazard reports and incident scenes — so safety decisions rest on real evidence.',
     },
     {
       key: 'environment',
       accent: 'environment',
-      poster: hseEnvironment,
+      poster: pillarPoster('#48a99b', '#2f8174', 'Environment'),
       title: 'Environment',
       text: 'Spill, emissions and remediation imagery — provably unaltered for regulators.',
     },
@@ -1655,6 +1736,93 @@ function DemoVideoStrip() {
               </figcaption>
             </figure>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function WhyProtectSection() {
+  return (
+    <section id="why" className="section section--alt">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">Why it matters</span>
+          <h2 className="section-title">Safety content is valuable — and vulnerable.</h2>
+          <p className="section-lede">
+            HSE teams produce expensive, safety-critical media — AR training, hazard
+            datasets, inspection and incident imagery. Once it's digital it can be
+            copied, passed off, or quietly edited. DCP closes both gaps at once.
+          </p>
+        </div>
+
+        <div className="protect-flow reveal">
+          <div className="protect-col protect-col--risk">
+            <div className="protect-col-label">The risk</div>
+            <div className="threat-card">
+              <div className="protect-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="protect-card-title">Stolen &amp; misused</h4>
+                <p className="protect-card-text">Training and inspection media gets copied and reused with no credit, control, or way to trace the leak.</p>
+              </div>
+            </div>
+            <div className="threat-card">
+              <div className="protect-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="protect-card-title">Faked &amp; altered</h4>
+                <p className="protect-card-text">A doctored hazard or procedure image still looks official — and sends workers the wrong information.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="protect-arrow" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+            </svg>
+          </div>
+
+          <div className="protect-col protect-col--solution">
+            <div className="protect-col-label">DCP protects it</div>
+            <div className="solution-card">
+              <div className="protect-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12c3-4 6-4 9 0s6 4 9 0" /><path d="M3 17c3-4 6-4 9 0s6 4 9 0" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="protect-card-title">Invisible watermark → ownership</h4>
+                <p className="protect-card-text">An imperceptible mark survives downloads and re-uploads, so you can always prove who created the content and trace misuse.</p>
+              </div>
+            </div>
+            <div className="solution-card">
+              <div className="protect-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="protect-card-title">C2PA → authenticity</h4>
+                <p className="protect-card-text">A cryptographic seal proves the file is the official, unaltered version — and any tampering shows up instantly on verification.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="protect-cta reveal">
+          <button className="cta cta-primary" onClick={() => scrollToId('demo')}>
+            Try it on an image
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
         </div>
       </div>
     </section>
@@ -2260,6 +2428,7 @@ function App() {
     <div className="App">
       <GlobalNav />
       <Hero />
+      <WhyProtectSection />
       <DemoVideoStrip />
       <FeaturesSection />
       <HowItWorksSection />
