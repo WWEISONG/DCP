@@ -3,7 +3,10 @@ import './App.css';
 import axios from 'axios';
 import unswLogo from './assets/UNSW_logo.png';
 import data61Logo from './assets/data61-logo.png';
-import fuBaoImage from './assets/FuBao.png';
+import heroHse from './assets/hero-hse.jpg';
+import hseHealth from './assets/hse-health.jpg';
+import hseSafety from './assets/hse-safety.jpg';
+import hseEnvironment from './assets/hse-environment.jpg';
 import teamWeiSong from './assets/team_weisong.jpg';
 import teamYuleiSui from './assets/team_yuleisui.jpg';
 import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
@@ -61,9 +64,9 @@ function FileDropZone({ panelId, file, preview, onFile, onClear, disabled }) {
     e.target.value = '';
   };
   const loadExample = async () => {
-    const resp = await fetch(fuBaoImage);
+    const resp = await fetch(heroHse);
     const blob = await resp.blob();
-    onFile(new File([blob], 'FuBao.png', { type: blob.type || 'image/png' }));
+    onFile(new File([blob], 'example-site.jpg', { type: blob.type || 'image/jpeg' }));
   };
 
   if (preview) {
@@ -1537,7 +1540,7 @@ function Hero() {
           </div>
 
           <div className="hero-graphic reveal">
-            <img src={fuBaoImage} alt="Protected content example" className="hero-graphic-img" />
+            <img src={heroHse} alt="Worker in full protective gear on a worksite — imagery protected by DCP" className="hero-graphic-img" />
             <div className="hero-badge hero-badge--c2pa">
               <span className="hero-badge-icon" aria-hidden="true">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -1600,18 +1603,21 @@ function DemoVideoStrip() {
     {
       key: 'health',
       accent: 'health',
+      poster: hseHealth,
       title: 'Health',
       text: 'Occupational-health and exposure records — kept authentic for compliance and liability.',
     },
     {
       key: 'safety',
       accent: 'safety',
+      poster: hseSafety,
       title: 'Safety',
       text: 'Site inspections, hazard reports and incident scenes — so safety decisions rest on real evidence.',
     },
     {
       key: 'environment',
       accent: 'environment',
+      poster: hseEnvironment,
       title: 'Environment',
       text: 'Spill, emissions and remediation imagery — provably unaltered for regulators.',
     },
@@ -1630,7 +1636,7 @@ function DemoVideoStrip() {
               <div className={`video-window-media video-window-media--${c.accent}`}>
                 <video
                   className="video-window-video"
-                  poster={fuBaoImage}
+                  poster={c.poster}
                   controls
                   muted
                   loop
