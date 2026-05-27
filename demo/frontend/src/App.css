@@ -1641,3 +1641,213 @@ a:hover { color: var(--color-accent-hover); }
   -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
   z-index: -1;
 }
+
+/* ============================================================
+   Trust gap — stats + existing-tools comparison (mirrors slide 5)
+   ============================================================ */
+
+.trust-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  max-width: 820px;
+  margin: 0 auto 40px;
+}
+@media (max-width: 720px) {
+  .trust-stats { grid-template-columns: 1fr; }
+}
+.trust-stat {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.trust-stat--alt { border-left-color: var(--color-info); }
+.trust-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-accent);
+  flex-shrink: 0;
+  min-width: 100px;
+}
+.trust-stat--alt .trust-stat-value { color: var(--color-info); }
+.trust-stat-label {
+  font-size: 0.92rem;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+.trust-stat-label em {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  font-size: 0.82rem;
+}
+
+.compare-table {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 1fr 1fr;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-width: 920px;
+  margin: 0 auto;
+  box-shadow: var(--shadow-sm);
+}
+.compare-row { display: contents; }
+.compare-cell {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+.compare-row:last-child .compare-cell { border-bottom: 0; }
+.compare-cell--rowlabel {
+  justify-content: flex-start;
+  color: var(--color-text);
+  font-weight: 500;
+}
+.compare-cell--colhead {
+  background: var(--color-text-tertiary);
+  color: var(--color-text-inverse);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+.compare-cell--hl { background: var(--color-accent); }
+.compare-mark-ok { color: var(--color-success); font-weight: 800; font-size: 1.25rem; }
+.compare-mark-no { color: var(--color-error);   font-weight: 800; font-size: 1.25rem; }
+.compare-caption {
+  text-align: center;
+  margin: 22px auto 0;
+  font-size: 0.95rem;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+/* ============================================================
+   Novelties — what's new about DCP (slides 7-9)
+   ============================================================ */
+
+.novelty-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+@media (max-width: 980px) {
+  .novelty-grid { grid-template-columns: 1fr; }
+}
+.novelty-card {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 22px 22px 24px;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.novelty-card:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+.novelty-tag {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-hover);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.novelty-tag--alt {
+  background: var(--color-info-subtle);
+  color: var(--color-info);
+}
+.novelty-tag--secondary {
+  background: var(--color-secondary-subtle);
+  color: var(--color-secondary-hover);
+}
+.novelty-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  color: var(--color-text);
+}
+.novelty-text {
+  font-size: 0.92rem;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+  flex-grow: 1;
+}
+.novelty-text code {
+  background: var(--color-surface);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--color-text);
+}
+.novelty-equation {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-accent-hover);
+  text-align: center;
+}
+.novelty-flow {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.novelty-flow-pill {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border-subtle);
+}
+.novelty-flow-pill--strip {
+  background: var(--color-error-subtle);
+  color: var(--color-error);
+  border-color: transparent;
+}
+.novelty-flow-pill--ok {
+  background: rgba(61, 155, 143, 0.14);
+  color: var(--color-accent-hover);
+  border-color: transparent;
+}
+.novelty-flow-arrow {
+  color: var(--color-text-tertiary);
+  font-weight: 700;
+}
+.novelty-bullets {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}

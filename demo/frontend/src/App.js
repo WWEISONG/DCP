@@ -1491,6 +1491,7 @@ function GlobalNav() {
 
         <div className="global-nav-links">
           <button className="global-nav-link" onClick={() => scrollToId('features')}>Features</button>
+          <button className="global-nav-link" onClick={() => scrollToId('novelty')}>Novelty</button>
           <button className="global-nav-link" onClick={() => scrollToId('how')}>How it works</button>
           <button className="global-nav-link" onClick={() => scrollToId('docs')}>Docs</button>
           <button className="global-nav-link" onClick={() => scrollToId('usecases')}>Use cases</button>
@@ -1623,6 +1624,89 @@ function DemoVideoStrip() {
   );
 }
 
+function ExistingToolsSection() {
+  // Mirrors slide 5 ("Existing tools don't survive real workflows") + the slide-4 stats.
+  // Establishes the trust gap that motivates DCP — incident reports / audit logs /
+  // insurance claims are all built on phone photos that today no one can verify.
+  const rows = [
+    'Cryptographic origin proof',
+    'Survives metadata stripping',
+    'Robust to JPEG / noise / screenshots',
+    'Cross-verified end-to-end',
+  ];
+  const cols = [
+    { name: 'C2PA only',      marks: [true,  false, false, false] },
+    { name: 'Watermark only', marks: [false, true,  true,  false] },
+    { name: 'DCP (combined)', marks: [true,  true,  true,  true ], highlight: true },
+  ];
+  return (
+    <section id="gap" className="section section--alt">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">The trust gap</span>
+          <h2 className="section-title">Existing tools don't survive real workflows.</h2>
+          <p className="section-lede">
+            Incident reports, audit logs and insurance claims are all built on phone photos
+            forwarded through email, chats and claim portals. Today none of them can be
+            cryptographically verified — and the threat is growing fast.
+          </p>
+        </div>
+
+        <div className="trust-stats reveal">
+          <div className="trust-stat">
+            <span className="trust-stat-value">2.8 M</span>
+            <span className="trust-stat-label">
+              US private-industry workplace injuries &amp; illnesses (2022)<br />
+              <em>Source: US BLS, Nov 2023.</em>
+            </span>
+          </div>
+          <div className="trust-stat trust-stat--alt">
+            <span className="trust-stat-value">10×</span>
+            <span className="trust-stat-label">
+              Global deepfake fraud incidents, 2022 → 2023<br />
+              <em>Source: Sumsub Identity Fraud Report (2023).</em>
+            </span>
+          </div>
+        </div>
+
+        <div className="compare-table reveal" role="table" aria-label="Existing-tools comparison">
+          <div className="compare-row compare-row--head" role="row">
+            <div className="compare-cell compare-cell--rowlabel" role="columnheader"></div>
+            {cols.map(c => (
+              <div
+                key={c.name}
+                role="columnheader"
+                className={`compare-cell compare-cell--colhead ${c.highlight ? 'compare-cell--hl' : ''}`}
+              >
+                {c.name}
+              </div>
+            ))}
+          </div>
+          {rows.map((label, i) => (
+            <div className="compare-row" role="row" key={label}>
+              <div className="compare-cell compare-cell--rowlabel" role="rowheader">{label}</div>
+              {cols.map(c => (
+                <div
+                  key={c.name}
+                  role="cell"
+                  className={`compare-cell ${c.marks[i] ? 'compare-mark-ok' : 'compare-mark-no'}`}
+                  aria-label={c.marks[i] ? 'yes' : 'no'}
+                >
+                  {c.marks[i] ? '✓' : '✗'}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        <p className="compare-caption reveal">
+          Each existing approach has a gap. The combination closes them.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function FeaturesSection() {
   return (
     <section id="features" className="section">
@@ -1681,6 +1765,74 @@ function FeaturesSection() {
               re-compression or noise attack collapses the watermark. Both signals
               are surfaced clearly to the viewer.
             </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function NoveltiesSection() {
+  // Mirrors slides 7-9 — DCP's three research/engineering contributions.
+  // Kept consistent with the website's existing palette (teal accent, info blue, etc.).
+  return (
+    <section id="novelty" className="section">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">What's new</span>
+          <h2 className="section-title">Three things only DCP does.</h2>
+          <p className="section-lede">
+            C2PA and watermarks have existed separately for years. DCP combines them so
+            they verify each other — and adds a neural watermark that survives the way
+            HSE images really travel.
+          </p>
+        </div>
+
+        <div className="novelty-grid">
+          <div className="novelty-card reveal">
+            <div className="novelty-tag">Novelty 1</div>
+            <h3 className="novelty-title">Mutual cross-binding</h3>
+            <p className="novelty-text">
+              The watermark's payload is a <code>SHA-256</code> of the C2PA manifest.
+              Tamper with the pixels and the C2PA hash fails. Tamper with the manifest
+              and the watermark stops matching. Either layer alone can be defeated;
+              together they cannot.
+            </p>
+            <div className="novelty-equation">watermark = SHA-256( C2PA manifest )</div>
+          </div>
+
+          <div className="novelty-card reveal">
+            <div className="novelty-tag novelty-tag--alt">Novelty 2</div>
+            <h3 className="novelty-title">Survives metadata stripping</h3>
+            <p className="novelty-text">
+              C2PA dies the moment a platform strips metadata — which most do (claim
+              portals, social, chat). The neural watermark lives in the pixels, so
+              provenance keeps working through the messy real workflows HSE photos
+              actually traverse.
+            </p>
+            <div className="novelty-flow">
+              <span className="novelty-flow-pill">Signed</span>
+              <span className="novelty-flow-arrow">→</span>
+              <span className="novelty-flow-pill novelty-flow-pill--strip">Metadata stripped</span>
+              <span className="novelty-flow-arrow">→</span>
+              <span className="novelty-flow-pill novelty-flow-pill--ok">Still verifiable</span>
+            </div>
+          </div>
+
+          <div className="novelty-card reveal">
+            <div className="novelty-tag novelty-tag--secondary">Novelty 3</div>
+            <h3 className="novelty-title">Robust neural watermark</h3>
+            <p className="novelty-text">
+              A learned, diffusion-based encoder embeds an imperceptible mark in the
+              pixels. It's designed for the real attack channel: JPEG re-compression,
+              additive noise, screenshots, re-uploads — where frequency-domain
+              baselines drop to chance.
+            </p>
+            <div className="novelty-bullets">
+              <span>· Survives JPEG re-compression</span>
+              <span>· Survives noise &amp; resizing</span>
+              <span>· Bound to the C2PA manifest (Novelty 1)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -2225,7 +2377,9 @@ function App() {
       <GlobalNav />
       <Hero />
       <DemoVideoStrip />
+      <ExistingToolsSection />
       <FeaturesSection />
+      <NoveltiesSection />
       <HowItWorksSection />
       <DocsSection />
       <UseCasesSection />
