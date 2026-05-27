@@ -2369,13 +2369,13 @@ function App() {
     <div className="App">
       <GlobalNav />
       <Hero />
+      <UseCasesSection />
       <DemoVideoStrip />
       <ExistingToolsSection />
       <FeaturesSection />
       <NoveltiesSection />
       <HowItWorksSection />
       <DocsSection />
-      <UseCasesSection />
       <DemoSection />
       <TeamSection />
       <Footer />
