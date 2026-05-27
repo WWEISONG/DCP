@@ -4,6 +4,12 @@ import axios from 'axios';
 import unswLogo from './assets/UNSW_logo.png';
 import data61Logo from './assets/data61-logo.png';
 import exampleSite from './assets/hse-safety.jpg';
+import hseRefinery  from './assets/hse-refinery.jpg';
+import hseClimb     from './assets/hse-climb.jpg';
+import hseBoiler    from './assets/hse-boiler.jpg';
+import hsePpe       from './assets/hse-ppe.jpg';
+import hseSandblast from './assets/hse-sandblast.jpg';
+import hseWater     from './assets/hse-water.jpg';
 import teamWeiSong from './assets/team_weisong.jpg';
 import teamYuleiSui from './assets/team_yuleisui.jpg';
 import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
@@ -2118,91 +2124,68 @@ function DocsSection() {
 function UseCasesSection() {
   const cases = [
     {
-      title: 'Workplace safety records',
-      text: 'Prove incident photos, equipment inspections and protective-equipment compliance shots are authentic and unaltered, so safety decisions rest on real evidence.',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      ),
+      photo: hseRefinery,
+      title: 'Incident reports',
+      stake: 'decides workers’ comp claims & legal liability',
+      text: 'Slips, near-misses, equipment damage — every report photo cryptographically bound to the time and place of the incident.',
     },
     {
-      title: 'Environmental compliance',
-      text: 'Bind spill, emissions and before/after remediation imagery to its source so regulatory evidence can’t be quietly doctored.',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
-          <path d="M2 21c0-3 1.85-5.36 5.08-6" />
-        </svg>
-      ),
+      photo: hseClimb,
+      title: 'Safety inspections',
+      stake: 'decides permits & site reopen',
+      text: 'Walkthrough and PPE-compliance photos auditors can verify at a glance, so safety decisions rest on real evidence.',
     },
     {
-      title: 'Journalism & newsrooms',
-      text: 'Stamp every press photo at the moment of capture so an editor downstream can prove the image is original.',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
-          <path d="M18 14h-8" /><path d="M15 18h-5" /><path d="M10 6h8v4h-8V6z" />
-        </svg>
-      ),
+      photo: hseBoiler,
+      title: 'Contractor verification',
+      stake: 'decides progress payments & sign-off',
+      text: '‘Work completed’ photos bound to who, when, and the original pixels — so resellers and subcontractors can’t swap shots.',
     },
     {
-      title: 'AI-generated content',
-      text: 'Watermark every model output and sign it with the generator’s identity, so AI vs. real provenance is unambiguous.',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <path d="M9 9h6v6H9z" /><path d="M9 3v2" /><path d="M15 3v2" /><path d="M9 19v2" /><path d="M15 19v2" /><path d="M3 9h2" /><path d="M3 15h2" /><path d="M19 9h2" /><path d="M19 15h2" />
-        </svg>
-      ),
+      photo: hsePpe,
+      title: 'Compliance audits',
+      stake: 'decides regulator’s pass or fail',
+      text: 'Tamper-evident audit trail of PPE checks and compliance evidence — verifiable years later, with the manifest intact.',
     },
     {
-      title: 'Social platforms',
-      text: 'Surface a verified badge next to authenticated uploads. Auto-flag images whose watermark accuracy collapses on ingest.',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="2" y1="12" x2="22" y2="12" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-        </svg>
-      ),
+      photo: hseSandblast,
+      title: 'Insurance claims',
+      stake: 'decides claim payout',
+      text: 'Injury and damage photos provably from the time and place of the incident, so fraudulent claims fail verification.',
     },
     {
-      title: 'E-commerce & catalogues',
-      text: 'Bind product imagery to a verified brand so resellers can’t pass off altered shots as official.',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <path d="M16 10a4 4 0 0 1-8 0" />
-        </svg>
-      ),
+      photo: hseWater,
+      title: 'Environmental records',
+      stake: 'decides fines & remediation orders',
+      text: 'Spill, emissions and before/after remediation imagery bound to its source — regulatory evidence that can’t be quietly doctored.',
     },
   ];
 
   return (
-    <section id="usecases" className="section">
+    <section id="usecases" className="section section--alt">
       <div className="section-container">
         <div className="section-header reveal">
-          <span className="section-eyebrow">Use cases</span>
-          <h2 className="section-title">Wherever images drive decisions — starting with the worksite.</h2>
+          <span className="section-eyebrow">HSE use cases</span>
+          <h2 className="section-title">Built for the photos every workplace already takes.</h2>
           <p className="section-lede">
-            If a decision depends on an image, that image needs to be provable.
-            DCP adds that proof — on the worksite first, and anywhere else images
-            have to be trusted.
+            Incident reports, safety inspections, contractor verification, compliance audits,
+            insurance claims, environmental records — DCP makes each photo provable so
+            the decisions resting on them can stand.
           </p>
         </div>
 
-        <div className="usecases-grid">
+        <div className="hse-cases-grid">
           {cases.map((c) => (
-            <div className="usecase-card reveal" key={c.title}>
-              <div className="usecase-icon" aria-hidden="true">{c.icon}</div>
-              <div>
-                <h3 className="usecase-title">{c.title}</h3>
-                <p className="usecase-text">{c.text}</p>
+            <article className="hse-case reveal" key={c.title}>
+              <div className="hse-case-media">
+                <img src={c.photo} alt="" loading="lazy" />
+                <span className="hse-case-stake">{c.stake}</span>
               </div>
-            </div>
+              <div className="hse-case-body">
+                <h3 className="hse-case-title">{c.title}</h3>
+                <p className="hse-case-text">{c.text}</p>
+              </div>
+            </article>
           ))}
         </div>
       </div>
