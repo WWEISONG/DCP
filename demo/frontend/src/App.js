@@ -12,9 +12,6 @@ import hseSandblast from './assets/hse-sandblast.jpg';
 import hseWater     from './assets/hse-water.jpg';
 import figArchitecture  from './assets/fig-architecture.png';
 import figAiGrowth      from './assets/fig-ai_growth.png';
-import figCrossBinding  from './assets/fig-cross_binding.png';
-import figStripSurvival from './assets/fig-strip_survival.png';
-import figRobustness    from './assets/fig-robustness.png';
 import teamWeiSong from './assets/team_weisong.jpg';
 import teamYuleiSui from './assets/team_yuleisui.jpg';
 import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
@@ -1819,7 +1816,7 @@ function NoveltiesSection() {
               and the watermark stops matching. Either layer alone can be defeated;
               together they cannot.
             </p>
-            <img src={figCrossBinding} alt="" className="novelty-figure" loading="lazy" />
+            <div className="novelty-equation">watermark = SHA-256( C2PA manifest )</div>
           </div>
 
           <div className="novelty-card reveal">
@@ -1831,7 +1828,13 @@ function NoveltiesSection() {
               provenance keeps working through the messy real workflows HSE photos
               actually traverse.
             </p>
-            <img src={figStripSurvival} alt="" className="novelty-figure" loading="lazy" />
+            <div className="novelty-flow">
+              <span className="novelty-flow-pill">Signed</span>
+              <span className="novelty-flow-arrow">→</span>
+              <span className="novelty-flow-pill novelty-flow-pill--strip">Metadata stripped</span>
+              <span className="novelty-flow-arrow">→</span>
+              <span className="novelty-flow-pill novelty-flow-pill--ok">Still verifiable</span>
+            </div>
           </div>
 
           <div className="novelty-card reveal">
@@ -1843,7 +1846,6 @@ function NoveltiesSection() {
               additive noise, screenshots, re-uploads — where frequency-domain
               baselines drop to chance.
             </p>
-            <img src={figRobustness} alt="" className="novelty-figure" loading="lazy" />
             <div className="novelty-bullets">
               <span>· Survives JPEG re-compression</span>
               <span>· Survives noise &amp; resizing</span>
