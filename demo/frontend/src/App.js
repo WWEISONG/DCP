@@ -11,7 +11,6 @@ import hsePpe       from './assets/hse-ppe.jpg';
 import hseSandblast from './assets/hse-sandblast.jpg';
 import hseWater     from './assets/hse-water.jpg';
 import figArchitecture  from './assets/fig-architecture.png';
-import figAiGrowth      from './assets/fig-ai_growth.png';
 import teamWeiSong from './assets/team_weisong.jpg';
 import teamYuleiSui from './assets/team_yuleisui.jpg';
 import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
@@ -1676,11 +1675,6 @@ function ExistingToolsSection() {
             </span>
           </div>
         </div>
-
-        <figure className="trust-figure reveal">
-          <img src={figAiGrowth} alt="" loading="lazy" />
-          <figcaption>Year-over-year growth in deepfake fraud, 2022 → 2023. Source: Sumsub Identity Fraud Report (2023).</figcaption>
-        </figure>
 
         <div className="compare-table reveal" role="table" aria-label="Existing-tools comparison">
           <div className="compare-row compare-row--head" role="row">
