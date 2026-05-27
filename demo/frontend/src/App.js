@@ -10,6 +10,11 @@ import hseBoiler    from './assets/hse-boiler.jpg';
 import hsePpe       from './assets/hse-ppe.jpg';
 import hseSandblast from './assets/hse-sandblast.jpg';
 import hseWater     from './assets/hse-water.jpg';
+import figArchitecture  from './assets/fig-architecture.png';
+import figAiGrowth      from './assets/fig-ai_growth.png';
+import figCrossBinding  from './assets/fig-cross_binding.png';
+import figStripSurvival from './assets/fig-strip_survival.png';
+import figRobustness    from './assets/fig-robustness.png';
 import teamWeiSong from './assets/team_weisong.jpg';
 import teamYuleiSui from './assets/team_yuleisui.jpg';
 import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
@@ -1675,6 +1680,11 @@ function ExistingToolsSection() {
           </div>
         </div>
 
+        <figure className="trust-figure reveal">
+          <img src={figAiGrowth} alt="" loading="lazy" />
+          <figcaption>Year-over-year growth in deepfake fraud, 2022 → 2023. Source: Sumsub Identity Fraud Report (2023).</figcaption>
+        </figure>
+
         <div className="compare-table reveal" role="table" aria-label="Existing-tools comparison">
           <div className="compare-row compare-row--head" role="row">
             <div className="compare-cell compare-cell--rowlabel" role="columnheader"></div>
@@ -1726,6 +1736,11 @@ function FeaturesSection() {
             Together they make tampering both detectable and traceable.
           </p>
         </div>
+
+        <figure className="architecture-figure reveal">
+          <img src={figArchitecture} alt="" loading="lazy" />
+          <figcaption>C2PA manifest + invisible neural watermark — bound to each other so tampering either layer breaks both.</figcaption>
+        </figure>
 
         <div className="features-grid">
           <div className="feature-card reveal">
@@ -1804,7 +1819,7 @@ function NoveltiesSection() {
               and the watermark stops matching. Either layer alone can be defeated;
               together they cannot.
             </p>
-            <div className="novelty-equation">watermark = SHA-256( C2PA manifest )</div>
+            <img src={figCrossBinding} alt="" className="novelty-figure" loading="lazy" />
           </div>
 
           <div className="novelty-card reveal">
@@ -1816,13 +1831,7 @@ function NoveltiesSection() {
               provenance keeps working through the messy real workflows HSE photos
               actually traverse.
             </p>
-            <div className="novelty-flow">
-              <span className="novelty-flow-pill">Signed</span>
-              <span className="novelty-flow-arrow">→</span>
-              <span className="novelty-flow-pill novelty-flow-pill--strip">Metadata stripped</span>
-              <span className="novelty-flow-arrow">→</span>
-              <span className="novelty-flow-pill novelty-flow-pill--ok">Still verifiable</span>
-            </div>
+            <img src={figStripSurvival} alt="" className="novelty-figure" loading="lazy" />
           </div>
 
           <div className="novelty-card reveal">
@@ -1834,6 +1843,7 @@ function NoveltiesSection() {
               additive noise, screenshots, re-uploads — where frequency-domain
               baselines drop to chance.
             </p>
+            <img src={figRobustness} alt="" className="novelty-figure" loading="lazy" />
             <div className="novelty-bullets">
               <span>· Survives JPEG re-compression</span>
               <span>· Survives noise &amp; resizing</span>
