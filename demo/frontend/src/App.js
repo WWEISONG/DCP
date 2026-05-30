@@ -11,6 +11,9 @@ import hsePpe       from './assets/hse-ppe.jpg';
 import hseSandblast from './assets/hse-sandblast.jpg';
 import hseWater     from './assets/hse-water.jpg';
 import figArchitecture  from './assets/fig-architecture.png';
+import scenarioIncident    from './assets/scenario-incident.jpg';
+import scenarioEnvironment from './assets/scenario-environment.jpg';
+import scenarioTech4HSE    from './assets/scenario-tech4hse.jpg';
 import teamWeiSong from './assets/team_weisong.jpg';
 import teamYuleiSui from './assets/team_yuleisui.jpg';
 import teamZhenchangXing from './assets/team_zhenchangxing.jpg';
@@ -1497,6 +1500,7 @@ function GlobalNav() {
         </div>
 
         <div className="global-nav-links">
+          <button className="global-nav-link" onClick={() => scrollToId('scenarios')}>Scenarios</button>
           <button className="global-nav-link" onClick={() => scrollToId('features')}>Features</button>
           <button className="global-nav-link" onClick={() => scrollToId('novelty')}>Novelty</button>
           <button className="global-nav-link" onClick={() => scrollToId('how')}>How it works</button>
@@ -1631,6 +1635,62 @@ function DemoVideoStrip() {
   );
 }
 
+function UsageScenariosSection() {
+  // Mirrors slides 3-5 of the deck: two detailed HSE scenarios + the Tech4HSE cross-project hub.
+  const scenarios = [
+    {
+      src: scenarioIncident,
+      title: 'Serious workplace accident investigation',
+      caption:
+        'Photos taken on authorised devices at the scene flow through messaging, email and cloud, then ' +
+        'into incident reports. Two-layer provenance (C2PA + watermark) keeps the chain of evidence ' +
+        'verifiable end-to-end — and shows clearly if any frame was tampered or replaced.',
+    },
+    {
+      src: scenarioEnvironment,
+      title: 'Environmental compliance after a chemical spill',
+      caption:
+        'Captures across the response — spill, containment, cleanup — must reach regulators and auditors as ' +
+        'tamper-evident evidence. DCP signs and watermarks each image at capture so reports and submissions ' +
+        'survive sharing, compression and re-uploading without losing provenance.',
+    },
+    {
+      src: scenarioTech4HSE,
+      title: 'DCP as a shared trust layer across Tech4HSE',
+      caption:
+        'A common content-authenticity primitive every Tech4HSE project can build on — authenticating XR/AI ' +
+        'training content (P1·P3), giving AI-trust research a deployable mechanism (P4), and verifying ' +
+        'camera / sensor feeds for autonomy and monitoring (P6·P7).',
+    },
+  ];
+  return (
+    <section id="scenarios" className="section">
+      <div className="section-container">
+        <div className="section-header reveal">
+          <span className="section-eyebrow">Usage scenarios</span>
+          <h2 className="section-title">How DCP shows up in real HSE workflows.</h2>
+          <p className="section-lede">
+            Three concrete scenarios — from a single incident on a worksite, to a regulator-facing
+            environmental response, to a shared trust layer for the whole Tech4HSE program.
+          </p>
+        </div>
+
+        <div className="scenarios-stack">
+          {scenarios.map((sc) => (
+            <figure className="scenario-figure reveal" key={sc.title}>
+              <img src={sc.src} alt="" loading="lazy" />
+              <figcaption>
+                <strong>{sc.title}</strong>
+                <span>{sc.caption}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ExistingToolsSection() {
   // Mirrors slide 5 ("Existing tools don't survive real workflows") + the slide-4 stats.
   // Establishes the trust gap that motivates DCP — incident reports / audit logs /
@@ -1653,27 +1713,9 @@ function ExistingToolsSection() {
           <span className="section-eyebrow">The trust gap</span>
           <h2 className="section-title">Existing tools don't survive real workflows.</h2>
           <p className="section-lede">
-            Incident reports, audit logs and insurance claims are all built on phone photos
-            forwarded through email, chats and claim portals. Today none of them can be
-            cryptographically verified — and the threat is growing fast.
+            Incident reports, audit logs and insurance claims are all built on images forwarded through
+            email, chats and claim portals. Today none of them can be cryptographically verified end-to-end.
           </p>
-        </div>
-
-        <div className="trust-stats reveal">
-          <div className="trust-stat">
-            <span className="trust-stat-value">2.8 M</span>
-            <span className="trust-stat-label">
-              US private-industry workplace injuries &amp; illnesses (2022)<br />
-              <em>Source: US BLS, Nov 2023.</em>
-            </span>
-          </div>
-          <div className="trust-stat trust-stat--alt">
-            <span className="trust-stat-value">10×</span>
-            <span className="trust-stat-label">
-              Global deepfake fraud incidents, 2022 → 2023<br />
-              <em>Source: Sumsub Identity Fraud Report (2023).</em>
-            </span>
-          </div>
         </div>
 
         <div className="compare-table reveal" role="table" aria-label="Existing-tools comparison">
@@ -2367,6 +2409,7 @@ function App() {
       <Hero />
       <UseCasesSection />
       <DemoVideoStrip />
+      <UsageScenariosSection />
       <ExistingToolsSection />
       <FeaturesSection />
       <NoveltiesSection />
