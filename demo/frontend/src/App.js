@@ -1656,11 +1656,11 @@ function UsageScenariosSection() {
     },
     {
       src: scenarioTech4HSE,
-      title: 'DCP as a shared trust layer across Tech4HSE',
+      title: 'Why other Tech4HSE projects need DCP',
       caption:
-        'A common content-authenticity primitive every Tech4HSE project can build on — authenticating XR/AI ' +
-        'training content (P1·P3), giving AI-trust research a deployable mechanism (P4), and verifying ' +
-        'camera / sensor feeds for autonomy and monitoring (P6·P7).',
+        'The same risk runs across the program: AI/XR training content can be tampered (P1·P3); AI-trust ' +
+        'research has no checkable trust anchor (P4); autonomy and monitoring decisions ride on camera ' +
+        'feeds that can be spoofed (P6·P7). DCP turns each “without it” failure into a “with DCP” fix.',
     },
   ];
   return (
