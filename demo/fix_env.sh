@@ -2,7 +2,7 @@
 # Fix the .env file by re-running the setup
 # This script will remove the existing .env file and re-run local-setup
 
-C2PA_DIR="/mnt/data3/weisong/Haonan/VideoMark/c2pa-python-example"
+C2PA_DIR="${C2PA_DIR:-$(cd "$(dirname "$0")/.." && pwd)/c2pa-python-example}"
 ENV_FILE="${C2PA_DIR}/local_volume/.env"
 
 echo "Fixing .env file by re-running setup..."

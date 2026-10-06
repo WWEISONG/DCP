@@ -13,7 +13,7 @@ Before starting, ensure you have:
 ### Terminal 1 - Backend
 
 ```bash
-cd /mnt/data3/weisong/Haonan/VideoMark/demo
+cd <path-to-DCP>/demo
 ./start_backend.sh
 ```
 
@@ -29,7 +29,7 @@ python app.py
 ### Terminal 2 - Frontend
 
 ```bash
-cd /mnt/data3/weisong/Haonan/VideoMark/demo
+cd <path-to-DCP>/demo
 ./start_frontend.sh
 ```
 

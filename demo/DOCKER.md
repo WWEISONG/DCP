@@ -15,7 +15,7 @@ This guide explains how to run the VideoMark backend in Docker using a conda env
 From the `demo` directory:
 
 ```bash
-cd /mnt/data3/weisong/Haonan/VideoMark/demo
+cd <path-to-DCP>/demo
 docker compose up --build
 ```
 
@@ -29,7 +29,7 @@ This will:
 ### 2. Build Docker Image Manually
 
 ```bash
-cd /mnt/data3/weisong/Haonan/VideoMark/demo
+cd <path-to-DCP>/demo
 docker build -f backend/Dockerfile -t videomark-backend:latest ..
 ```
 
@@ -39,8 +39,8 @@ docker build -f backend/Dockerfile -t videomark-backend:latest ..
 docker run -d \
   --name videomark-backend \
   -p 8000:8000 \
-  -v /mnt/data3/weisong/Haonan/VideoMark/VINE:/app/VINE:ro \
-  -v /mnt/data3/weisong/Haonan/VideoMark/c2pa-python-example:/app/c2pa-python-example:ro \
+  -v <path-to-DCP>/VINE:/app/VINE:ro \
+  -v <path-to-DCP>/c2pa-python-example:/app/c2pa-python-example:ro \
   videomark-backend:latest
 ```
 

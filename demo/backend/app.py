@@ -2145,9 +2145,8 @@ if __name__ == '__main__':
             os.makedirs(dir_path, exist_ok=True, mode=0o755)
             # Try to change ownership if we have permission
             try:
-                import pwd
-                uid = pwd.getpwnam(os.getenv('USER', 'weisong')).pw_uid
-                gid = pwd.getpwnam(os.getenv('USER', 'weisong')).pw_gid
+                uid = os.getuid()
+                gid = os.getgid()
                 os.chown(dir_path, uid, gid)
             except (OSError, KeyError, ImportError):
                 pass  # Ignore if we can't change ownership

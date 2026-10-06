@@ -2,7 +2,7 @@
 # Fix permissions for client_volume directory
 # This script needs to be run with sudo or by a user with appropriate permissions
 
-C2PA_DIR="/mnt/data3/weisong/Haonan/VideoMark/c2pa-python-example"
+C2PA_DIR="${C2PA_DIR:-$(cd "$(dirname "$0")/.." && pwd)/c2pa-python-example}"
 CLIENT_VOLUME="${C2PA_DIR}/client_volume"
 
 echo "Fixing permissions for ${CLIENT_VOLUME}..."
